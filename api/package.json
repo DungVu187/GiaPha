@@ -19,7 +19,8 @@
     "test:int": "vitest run --project integration",
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "e2e:prepare": "tsx scripts/e2e-prepare.ts"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
