@@ -24,40 +24,48 @@ Muốn đổi một quyết định đã chốt (bảng D1–D16 trong spec) →
 
 | GĐ | Nội dung | Trạng thái |
 |---|---|---|
-| 1 | Khung Next.js, Docker Postgres, Prisma, seed admin, đăng nhập session, `/api/health`, CI | Chưa làm |
+| 1 | Khung NestJS (`api/`) + Next.js (`web/`), Postgres, Prisma, seed admin, đăng nhập session, `/api/health`, CI | Chưa làm |
 | 2 | CRUD thành viên, quan hệ, đời, ngày giỗ + lịch âm, phân quyền, ảnh | Chưa làm |
 | 3 | Đăng ký + phát hiện trùng + "Đây là tôi" | Chưa làm |
 | 4 | Cây gia phả (React Flow) | Chưa làm |
 | 5 | Danh sách theo đời, tìm kiếm, lịch giỗ, dashboard | Chưa làm |
 | 6 | Tài khoản, quên mật khẩu, trang quản trị | Chưa làm |
-| 7 | Deploy VPS (Nginx, SSL, backup), CD, Beszel + Dozzle, UptimeRobot | Chưa làm |
+| 7 | Deploy VPS (Nginx, PM2, SSL, backup), CD, monitor, UptimeRobot | Chưa làm |
 
 ## Stack
 
-- **Next.js (App Router) + TypeScript** — vừa UI vừa backend (server actions / route handlers). **Không có NestJS.**
-- Tailwind CSS + shadcn/ui.
-- Prisma + PostgreSQL.
-- Auth: session lưu DB + cookie httpOnly. **Không dùng JWT.**
+- **Tách riêng frontend và backend**, hai app độc lập trong cùng repo:
+  - `api/` — **NestJS** + TypeScript: toàn bộ API, nghiệp vụ, Prisma, auth. Mọi route có tiền tố `/api`.
+  - `web/` — **Next.js (App Router)** + TypeScript: **chỉ giao diện**. Không Prisma, không server actions ghi dữ liệu; mọi dữ liệu lấy qua API.
+- Cùng origin: trình duyệt chỉ gọi `/api/*` trên domain của web (dev: Next rewrites → `localhost:4000`; prod: Nginx → NestJS). Không CORS.
+- Tailwind CSS + shadcn/ui (web).
+- Prisma + PostgreSQL **cài native** (không Docker). Dev: Postgres 18 trên Windows.
+- Auth: session lưu DB + cookie httpOnly do API đặt. **Không dùng JWT.**
 - Cây: React Flow + dagre.
-- Ảnh: lưu ổ đĩa (`/uploads`, Docker volume). Không dùng Cloudinary/S3.
+- Ảnh: lưu ổ đĩa (`uploads/`), Nginx phục vụ. Không dùng Cloudinary/S3.
 - Test: Vitest (unit + integration với Postgres thật), Playwright (e2e).
-- CI/CD: GitHub Actions. CD: image → GHCR → SSH deploy VPS.
-- Monitor (trên VPS): Beszel (tài nguyên VPS + container), Dozzle (log Docker), UptimeRobot ping `/api/health`. **Không tự viết trang monitor.** App chỉ cần log JSON ra stdout.
-- Local: Docker Compose (`web` + `postgres`). Deploy VPS là giai đoạn cuối.
+- Deploy VPS: **Nginx + PM2** (không Docker, để nhẹ VPS; Docker xem xét sau). CI: GitHub Actions.
+- Monitor: UptimeRobot ping `/api/health`. **Không tự viết trang monitor.** API log JSON ra stdout. Công cụ xem tài nguyên/log trên VPS chốt lại ở GĐ7.
 
-## Cấu trúc thư mục (dự kiến)
+## Cấu trúc thư mục
 
 ```
 GiaPha/
-├── web/                 # Next.js app
+├── api/                 # NestJS
 │   ├── prisma/          # schema, migrations, seed
+│   ├── scripts/         # script tiện ích (tạo DB local, chuẩn bị DB e2e)
+│   ├── test/            # hạ tầng integration test
+│   └── src/
+│       ├── lib/         # logic thuần, có unit test
+│       ├── prisma/      # PrismaService, createDb
+│       └── <module>/    # auth/, health/, members/… (controller + logic + test)
+├── web/                 # Next.js (UI)
+│   ├── e2e/             # Playwright (chạy cả api + web)
 │   └── src/
 │       ├── app/         # routes
-│       ├── lib/         # logic nghiệp vụ thuần, có test
+│       ├── lib/         # helper gọi API, logic UI thuần, có test
 │       └── components/
-├── docs/superpowers/    # specs/ và plans/
-├── docker-compose.yml
-└── .env.example
+└── docs/superpowers/    # specs/ và plans/ (local, không push)
 ```
 
 ## Quy tắc nghiệp vụ không được làm sai
@@ -79,7 +87,8 @@ Chi tiết đầy đủ ở spec mục 3–6. Những điểm hay bị làm sai:
 ## Quy ước code
 
 - Tên biến, hàm, file, bảng: tiếng Anh. Chữ hiển thị trên giao diện: tiếng Việt.
-- Logic nghiệp vụ thuần (không gọi DB, không React) đặt trong `web/src/lib/` và có test Vitest.
+- Logic nghiệp vụ nằm ở `api/`. Logic thuần (không gọi DB) có unit test Vitest; logic chạm DB nhận `db` làm tham số để integration test được.
+- `web/` không chứa nghiệp vụ — chỉ hiển thị và gọi API. Kiểm tra quyền chỉ tin ở `api/`.
 - Không thêm thư viện mới khi vài dòng code tự viết được. Thêm dependency mới → nêu lý do.
 - Không thêm tính năng ngoài spec (xem spec mục 9 "Ngoài phạm vi MVP").
 - Không commit secret; biến môi trường mẫu để ở `.env.example`.
@@ -90,7 +99,7 @@ Chi tiết đầy đủ ở spec mục 3–6. Những điểm hay bị làm sai:
 
 - Mỗi hàm / action cần test: case đúng, case biên (rỗng, null, ngày không đầy đủ, tháng nhuận, trùng tên…), case sai (dữ liệu không hợp lệ, không đủ quyền).
 - Sửa lỗi: viết test tái hiện lỗi trước, thấy đỏ, rồi mới sửa.
-- Logic thuần `web/src/lib/` → unit test. Code chạm DB (server actions, route handlers) → integration test trên Postgres thật. Luồng người dùng chính → e2e Playwright. Chi tiết: spec mục 8.
+- Logic thuần → unit test (`*.test.ts`). Code chạm DB (logic `api/`, controller NestJS) → integration test trên Postgres thật (`*.int.test.ts`). Luồng người dùng chính → e2e Playwright. Chi tiết: spec mục 8.
 - Mọi thao tác ghi phải có test cho từng vai trò: Admin, Member đã liên kết, chưa liên kết.
 - Không mock Prisma/DB trong integration test. Không xóa / skip test để CI xanh.
 
