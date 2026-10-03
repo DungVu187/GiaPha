@@ -96,6 +96,17 @@ describe('auth API', () => {
     expect(res.body.message).toBe('Vui lòng nhập tên đăng nhập và mật khẩu.');
   });
 
+  it('body dạng form (CSRF từ form HTML khác site) → 400, không đăng nhập', async () => {
+    const res = await http()
+      .post('/api/auth/login')
+      .type('form')
+      .send('username=admin&password=MatKhau@123');
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe('Vui lòng nhập tên đăng nhập và mật khẩu.');
+    expect(setCookies(res)).toEqual([]);
+    expect(await db.session.count()).toBe(0);
+  });
+
   it('GET /me không có cookie → 401', async () => {
     expect((await http().get('/api/auth/me')).status).toBe(401);
   });
