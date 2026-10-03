@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: giapha
+          POSTGRES_PASSWORD: giapha
+          POSTGRES_DB: giapha_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U giapha"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://giapha:giapha@localhost:5432/giapha_test
+      TEST_DATABASE_URL: postgresql://giapha:giapha@localhost:5432/giapha_test
+      APP_VERSION: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            api/package-lock.json
+            web/package-lock.json
+
+      - name: api — cài đặt
+        working-directory: api
+        run: npm ci
+      - name: api — format + lint + typecheck
+        working-directory: api
+        run: npx prettier --check --no-error-on-unmatched-pattern "src/**/*.ts" "test/**/*.ts" "prisma/**/*.ts" "scripts/**/*.ts" && npm run lint && npm run typecheck
+      - name: api — unit
+        working-directory: api
+        run: npm run test:unit
+      - name: api — integration
+        working-directory: api
+        run: npm run test:int
+      - name: api — build
+        working-directory: api
+        run: npm run build
+
+      - name: web — cài đặt
+        working-directory: web
+        run: npm ci
+      - name: web — lint + typecheck + unit
+        working-directory: web
+        run: npm run lint && npm run typecheck && npm run test:unit
+      - name: web — build
+        working-directory: web
+        run: npm run build
+
+      - name: e2e
+        working-directory: web
+        run: npx playwright install --with-deps chromium && npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            web/playwright-report
+            web/test-results
+          retention-days: 7
