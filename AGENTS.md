@@ -19,12 +19,12 @@ Muốn đổi một quyết định đã chốt (bảng D1–D16 trong spec) →
 
 ## Trạng thái hiện tại
 
-- Đã chốt spec. **Chưa có code.** Bước tiếp theo: plan + triển khai Giai đoạn 1.
+- GĐ1 xong. Bước tiếp theo: plan GĐ2.
 - Cập nhật mục này khi xong mỗi giai đoạn.
 
 | GĐ | Nội dung | Trạng thái |
 |---|---|---|
-| 1 | Khung NestJS (`api/`) + Next.js (`web/`), Postgres, Prisma, seed admin, đăng nhập session, `/api/health`, CI | Chưa làm |
+| 1 | Khung NestJS (`api/`) + Next.js (`web/`), Postgres, Prisma, seed admin, đăng nhập session, `/api/health`, CI | Xong |
 | 2 | CRUD thành viên, quan hệ, đời, ngày giỗ + lịch âm, phân quyền, ảnh | Chưa làm |
 | 3 | Đăng ký + phát hiện trùng + "Đây là tôi" | Chưa làm |
 | 4 | Cây gia phả (React Flow) | Chưa làm |
@@ -92,6 +92,7 @@ Chi tiết đầy đủ ở spec mục 3–6. Những điểm hay bị làm sai:
 - Không thêm thư viện mới khi vài dòng code tự viết được. Thêm dependency mới → nêu lý do.
 - Không thêm tính năng ngoài spec (xem spec mục 9 "Ngoài phạm vi MVP").
 - Không commit secret; biến môi trường mẫu để ở `.env.example`.
+- `api/` là ESM (NestJS 12): import tương đối phải có đuôi `.js`.
 
 ## Test — bắt buộc
 
@@ -113,4 +114,19 @@ Chi tiết đầy đủ ở spec mục 3–6. Những điểm hay bị làm sai:
 
 ## Lệnh thường dùng
 
-Chưa có — bổ sung sau Giai đoạn 1 (dev, test, lint, migrate, seed).
+Lần đầu trên máy mới (Postgres 18 native đã cài):
+- `psql -U postgres -h localhost -f api/scripts/create-local-db.sql` — chạy bằng superuser `postgres` (tạo role `giapha`, DB `giapha` + `giapha_test`). Trên Windows psql thường không có trong PATH: `"C:\Program Files\PostgreSQL\18\bin\psql.exe"`.
+- `api/`: `cp .env.example .env && npm install && npm run db:migrate && npm run db:seed`
+- `web/`: `cp .env.example .env && npm install`
+
+| Thư mục | Lệnh | Việc |
+|---|---|---|
+| `api/` | `npm run start:dev` | API tại http://localhost:4000/api |
+| `web/` | `npm run dev` | giao diện tại http://localhost:3000 |
+| `api/` | `npm run format && npm run lint && npm run typecheck` | kiểm tra code (lint = oxlint) |
+| `web/` | `npm run lint && npm run typecheck` | kiểm tra code (typecheck chạy `next typegen` trước) |
+| `api/`, `web/` | `npm run test:unit` | unit test (`*.test.ts`) |
+| `api/` | `npm run test:int` | integration test với Postgres thật (`*.int.test.ts`, DB `giapha_test`) |
+| `web/` | `npm --prefix ../api run build && npm run build && npm run test:e2e` | e2e Playwright (tắt dev server trước: Playwright tự chạy api + web trên cổng 4000/3000; DB `giapha_test`) |
+| `api/` | `npm run db:migrate` | tạo/áp migration (DB dev) |
+| `api/` | `npm run db:seed` | tạo admin từ `ADMIN_USERNAME` / `ADMIN_PASSWORD` |
