@@ -18,7 +18,7 @@ coverage/
 
 # Build / test output
 dist/
-src/generated/
+**/src/generated/
 playwright-report/
 test-results/
 *.tsbuildinfo
