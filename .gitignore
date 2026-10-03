@@ -1,0 +1,17 @@
+# Tài liệu (spec, plan, yêu cầu) chỉ giữ local — không đưa lên GitHub
+*.md
+!/AGENTS.md
+!/CLAUDE.md
+
+# Cấu hình Claude Code cá nhân
+.claude/settings.local.json
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies / build
+node_modules/
+.next/
+coverage/

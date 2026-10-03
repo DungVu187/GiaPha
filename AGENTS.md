@@ -1,0 +1,107 @@
+# AGENTS.md — Gia Phả họ Vũ
+
+Hướng dẫn chung cho mọi AI agent (Claude, Codex, Cursor, …) làm việc trong repo này. Đọc hết file này trước khi làm bất cứ việc gì.
+
+## Dự án là gì
+
+Website gia phả cho dòng họ Vũ: đăng ký/đăng nhập, liên kết tài khoản với thành viên có sẵn, quản lý thành viên theo đời, quan hệ bố/mẹ/vợ chồng/con, tự sinh cây gia phả, còn sống/đã khuất, ngày mất, ngày giỗ (âm/dương lịch).
+
+## Nguồn sự thật (đọc theo thứ tự ưu tiên)
+
+1. `docs/superpowers/specs/2026-10-03-gia-pha-design.md` — **spec đã chốt**. Ghi đè tài liệu gốc ở những điểm nó nêu.
+2. `yeu-cau-he-thong-gia-pha.md` — tài liệu yêu cầu gốc (nghiệp vụ, giao diện, ví dụ hiển thị).
+3. `docs/superpowers/plans/` — plan triển khai từng giai đoạn (nếu có).
+
+**Các file `.md` trên chỉ lưu trên máy người dùng, KHÔNG có trên GitHub** (`.gitignore` chặn mọi `*.md` trừ `AGENTS.md`, `CLAUDE.md`). Clone repo về mà không thấy spec → hỏi người dùng, đừng đoán. Không bao giờ commit/push file `.md` nào khác hai file này.
+
+Mâu thuẫn giữa code và spec → dừng lại hỏi người dùng, không tự chọn.
+Muốn đổi một quyết định đã chốt (bảng D1–D16 trong spec) → hỏi người dùng trước.
+
+## Trạng thái hiện tại
+
+- Đã chốt spec. **Chưa có code.** Bước tiếp theo: plan + triển khai Giai đoạn 1.
+- Cập nhật mục này khi xong mỗi giai đoạn.
+
+| GĐ | Nội dung | Trạng thái |
+|---|---|---|
+| 1 | Khung Next.js, Docker Postgres, Prisma, seed admin, đăng nhập session, `/api/health`, CI | Chưa làm |
+| 2 | CRUD thành viên, quan hệ, đời, ngày giỗ + lịch âm, phân quyền, ảnh | Chưa làm |
+| 3 | Đăng ký + phát hiện trùng + "Đây là tôi" | Chưa làm |
+| 4 | Cây gia phả (React Flow) | Chưa làm |
+| 5 | Danh sách theo đời, tìm kiếm, lịch giỗ, dashboard | Chưa làm |
+| 6 | Tài khoản, quên mật khẩu, trang quản trị | Chưa làm |
+| 7 | Deploy VPS (Nginx, SSL, backup), CD, Beszel + Dozzle, UptimeRobot | Chưa làm |
+
+## Stack
+
+- **Next.js (App Router) + TypeScript** — vừa UI vừa backend (server actions / route handlers). **Không có NestJS.**
+- Tailwind CSS + shadcn/ui.
+- Prisma + PostgreSQL.
+- Auth: session lưu DB + cookie httpOnly. **Không dùng JWT.**
+- Cây: React Flow + dagre.
+- Ảnh: lưu ổ đĩa (`/uploads`, Docker volume). Không dùng Cloudinary/S3.
+- Test: Vitest (unit + integration với Postgres thật), Playwright (e2e).
+- CI/CD: GitHub Actions. CD: image → GHCR → SSH deploy VPS.
+- Monitor (trên VPS): Beszel (tài nguyên VPS + container), Dozzle (log Docker), UptimeRobot ping `/api/health`. **Không tự viết trang monitor.** App chỉ cần log JSON ra stdout.
+- Local: Docker Compose (`web` + `postgres`). Deploy VPS là giai đoạn cuối.
+
+## Cấu trúc thư mục (dự kiến)
+
+```
+GiaPha/
+├── web/                 # Next.js app
+│   ├── prisma/          # schema, migrations, seed
+│   └── src/
+│       ├── app/         # routes
+│       ├── lib/         # logic nghiệp vụ thuần, có test
+│       └── components/
+├── docs/superpowers/    # specs/ và plans/
+├── docker-compose.yml
+└── .env.example
+```
+
+## Quy tắc nghiệp vụ không được làm sai
+
+Chi tiết đầy đủ ở spec mục 3–6. Những điểm hay bị làm sai:
+
+- `username` UNIQUE; `full_name` **không** UNIQUE (người trùng tên là bình thường).
+- Họ tên luôn chuẩn hóa: trim, gộp khoảng trắng, IN HOA. Làm ở cả client và server; server là nguồn tin cậy.
+- Tài khoản (`User`) và thành viên (`Member`) là hai bảng tách rời. `User.member_id` UNIQUE, nullable.
+- Quan hệ con cái lưu bằng `father_id` / `mother_id` trên bản ghi người con. **Không** lưu mảng `children`.
+- Vợ/chồng lưu ở bảng `Marriage` riêng (cho phép nhiều cuộc hôn nhân).
+- Đời tự tính từ bố/mẹ (+1); vợ/chồng ngoài họ lấy đời của người trong họ. Đổi đời → cập nhật cả con cháu.
+- Ngày tháng có thể không đầy đủ (chỉ năm / tháng+năm / đủ) → lưu năm, tháng, ngày thành các cột int riêng.
+- Ngày mất và ngày giỗ là hai trường riêng. Lịch âm dùng thuật toán Hồ Ngọc Đức, múi giờ +7 (không dùng thư viện lịch Trung Quốc).
+- Hiển thị: người còn sống **không** hiện chữ "Còn sống"; người đã khuất hiện "ĐÃ KHUẤT", ngày mất, ngày giỗ, nơi an táng.
+- Cây chỉ vẽ người trong dòng (theo dòng cha) + vợ/chồng; không vẽ con của con gái.
+- Mọi thao tác ghi phải kiểm tra quyền ở server (Admin / Member đã liên kết / chưa liên kết — xem spec mục 5).
+
+## Quy ước code
+
+- Tên biến, hàm, file, bảng: tiếng Anh. Chữ hiển thị trên giao diện: tiếng Việt.
+- Logic nghiệp vụ thuần (không gọi DB, không React) đặt trong `web/src/lib/` và có test Vitest.
+- Không thêm thư viện mới khi vài dòng code tự viết được. Thêm dependency mới → nêu lý do.
+- Không thêm tính năng ngoài spec (xem spec mục 9 "Ngoài phạm vi MVP").
+- Không commit secret; biến môi trường mẫu để ở `.env.example`.
+
+## Test — bắt buộc
+
+**Mọi tính năng / sửa lỗi phải kèm test đủ các case cần thiết.** Không có test = chưa xong.
+
+- Mỗi hàm / action cần test: case đúng, case biên (rỗng, null, ngày không đầy đủ, tháng nhuận, trùng tên…), case sai (dữ liệu không hợp lệ, không đủ quyền).
+- Sửa lỗi: viết test tái hiện lỗi trước, thấy đỏ, rồi mới sửa.
+- Logic thuần `web/src/lib/` → unit test. Code chạm DB (server actions, route handlers) → integration test trên Postgres thật. Luồng người dùng chính → e2e Playwright. Chi tiết: spec mục 8.
+- Mọi thao tác ghi phải có test cho từng vai trò: Admin, Member đã liên kết, chưa liên kết.
+- Không mock Prisma/DB trong integration test. Không xóa / skip test để CI xanh.
+
+## Quy trình làm việc
+
+1. Mỗi giai đoạn: viết plan vào `docs/superpowers/plans/` → người dùng duyệt → mới code.
+2. Viết test trước, rồi code (TDD).
+3. Xong một việc: chạy lint + typecheck + test + build, báo kết quả thật (kể cả khi lỗi). CI phải xanh.
+4. Commit nhỏ, message rõ ràng. Chỉ commit/push khi người dùng yêu cầu. Chỉ push code (+ `AGENTS.md`, `CLAUDE.md`); spec/plan/tài liệu `.md` giữ local. Remote: `https://github.com/DungVu187/GiaPha.git`, nhánh `main`.
+5. Xong giai đoạn: cập nhật bảng "Trạng thái hiện tại" ở trên.
+
+## Lệnh thường dùng
+
+Chưa có — bổ sung sau Giai đoạn 1 (dev, test, lint, migrate, seed).
