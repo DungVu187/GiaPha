@@ -3,7 +3,7 @@ import { MAX_GENERATION } from './member-input.js';
 import { spouseIdsOf } from './relatives.js';
 
 const DEFAULT_MAX_STEPS = 10_000;
-const LOOP_ERROR = 'Không tính được đời: dữ liệu quan hệ có vòng lặp.';
+export const LOOP_ERROR = 'Không tính được đời: dữ liệu quan hệ có vòng lặp.';
 
 // null = không suy ra được, đời phải nhập tay.
 export async function derivedGeneration(
