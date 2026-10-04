@@ -5,6 +5,10 @@ import { defineConfig, devices } from "@playwright/test";
 if (existsSync("../api/.env")) process.loadEnvFile("../api/.env");
 
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL ?? "";
+// Chặn trước khi webServer khởi động: e2e xóa dữ liệu, không được chạm DB dev/prod.
+if (!TEST_DATABASE_URL || !/test/i.test(new URL(TEST_DATABASE_URL).pathname)) {
+  throw new Error("TEST_DATABASE_URL rỗng hoặc không trỏ tới DB có tên chứa 'test'. Từ chối chạy e2e.");
+}
 
 export default defineConfig({
   testDir: "./e2e",

@@ -28,16 +28,19 @@ export function LogoutButton() {
   }
 
   return (
-    <div className="flex items-center gap-3">
-      {error && (
-        <p role="alert" className="text-sm font-medium text-destructive">
-          {error}
-        </p>
-      )}
+    <>
       <Button type="button" variant="outline" size="sm" onClick={logout} disabled={pending}>
         <LogOut aria-hidden="true" />
         Đăng xuất
       </Button>
-    </div>
+      {error && (
+        <p
+          role="alert"
+          className="fixed inset-x-0 top-16 z-10 border-b border-destructive bg-primary-soft px-4 py-2 text-sm font-medium text-destructive sm:top-[72px] sm:px-10"
+        >
+          {error}
+        </p>
+      )}
+    </>
   );
 }

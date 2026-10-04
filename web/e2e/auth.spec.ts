@@ -20,6 +20,7 @@ test("sai mật khẩu hiện lỗi, vẫn ở /login", async ({ page }) => {
     page.getByRole("alert").filter({ hasText: "Sai tên đăng nhập hoặc mật khẩu." }),
   ).toBeVisible();
   await expect(page).toHaveURL(/\/login$/);
+  expect((await page.context().cookies()).find((c) => c.name === "giapha_session")).toBeUndefined();
 });
 
 test("đăng nhập → thấy lời chào → đăng xuất → bị khóa lại", async ({ page }) => {
@@ -52,10 +53,15 @@ test("GET /api/health qua web (rewrite tới api) trả ok", async ({ request })
 });
 
 test("để trống form thì không gửi, vẫn ở /login", async ({ page }) => {
+  let loginRequests = 0;
+  page.on("request", (req) => {
+    if (req.method() === "POST" && req.url().includes("/api/auth/login")) loginRequests++;
+  });
   await page.goto("/login");
   await page.getByRole("button", { name: "Đăng nhập" }).click();
   await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByLabel("Tên đăng nhập")).toBeFocused();
+  expect(loginRequests).toBe(0);
 });
 
 test("trang đăng nhập hiển thị đúng trên mobile 390x844", async ({ page }) => {

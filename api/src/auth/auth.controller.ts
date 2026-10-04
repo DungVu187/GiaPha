@@ -43,7 +43,7 @@ function parseCredentials(
   if (typeof username !== 'string' || typeof password !== 'string') return null;
   if (!username.trim() || !password) return null;
   if (
-    username.length > MAX_USERNAME_LENGTH ||
+    username.trim().length > MAX_USERNAME_LENGTH ||
     password.length > MAX_PASSWORD_LENGTH
   )
     return null;

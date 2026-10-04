@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { testDb as db } from '../../test/helpers/test-db.js';
-import { assertTestDatabaseUrl } from '../../test/helpers/db.js';
+import { assertTestDatabaseUrl, resetDb } from '../../test/helpers/db.js';
 
 describe('db (Postgres test)', () => {
   it('đang kết nối DB test, không phải DB dev', async () => {
@@ -16,7 +16,7 @@ describe('db (Postgres test)', () => {
     });
     await expect(
       db.user.create({ data: { username: 'dungvu123', passwordHash: 'y' } }),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({ code: 'P2002' });
   });
 
   it('xóa user thì xóa luôn session (cascade)', async () => {
@@ -26,11 +26,15 @@ describe('db (Postgres test)', () => {
     await db.session.create({
       data: { id: 'h1', userId: user.id, expiresAt: new Date() },
     });
+    expect(await db.session.count()).toBe(1);
     await db.user.delete({ where: { id: user.id } });
     expect(await db.session.count()).toBe(0);
   });
 
   it('resetDb làm sạch dữ liệu giữa các test', async () => {
+    await db.user.create({ data: { username: 'tam_thoi', passwordHash: 'x' } });
+    expect(await db.user.count()).toBe(1);
+    await resetDb(db);
     expect(await db.user.count()).toBe(0);
   });
 

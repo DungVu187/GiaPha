@@ -54,9 +54,16 @@ describe('session', () => {
   it('token hết hạn → null và session bị xóa', async () => {
     const user = await makeUser();
     const { token } = await createSession(db, user.id, NOW);
+    const other = await makeUser('user_khac');
+    const { token: otherToken } = await createSession(
+      db,
+      other.id,
+      new Date(NOW.getTime() + 1000),
+    );
     const later = new Date(NOW.getTime() + SESSION_TTL_MS);
     expect(await validateSessionToken(db, token, later)).toBeNull();
-    expect(await db.session.count()).toBe(0);
+    expect(await db.session.count()).toBe(1);
+    expect(await validateSessionToken(db, otherToken, later)).not.toBeNull();
   });
 
   it('còn 1ms trước hạn vẫn hợp lệ', async () => {

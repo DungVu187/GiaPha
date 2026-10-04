@@ -107,6 +107,42 @@ describe('auth API', () => {
     expect(await db.session.count()).toBe(0);
   });
 
+  it('JSON hỏng → 400 thông báo tiếng Việt', async () => {
+    const res = await http()
+      .post('/api/auth/login')
+      .set('Content-Type', 'application/json')
+      .send('{"username":');
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe('Dữ liệu gửi lên không hợp lệ.');
+  });
+
+  it('body quá lớn → 413 thông báo tiếng Việt', async () => {
+    const res = await http()
+      .post('/api/auth/login')
+      .send({ username: 'admin', password: 'a'.repeat(200_000) });
+    expect(res.status).toBe(413);
+    expect(res.body.message).toBe('Dữ liệu gửi lên quá lớn.');
+  });
+
+  it('username đúng 64 ký tự và mật khẩu đúng 256 ký tự không bị 400', async () => {
+    const username = 'a'.repeat(64);
+    const password = 'p'.repeat(256);
+    await db.user.create({
+      data: { username, passwordHash: await hashPassword(password) },
+    });
+    const ok = await http()
+      .post('/api/auth/login')
+      .send({ username, password });
+    expect(ok.status).toBe(200);
+  });
+
+  it('username 64 ký tự kèm khoảng trắng hai đầu không bị 400 vì độ dài', async () => {
+    const res = await http()
+      .post('/api/auth/login')
+      .send({ username: `  ${'a'.repeat(64)}  `, password: 'MatKhau@123' });
+    expect(res.status).toBe(401);
+  });
+
   it('GET /me không có cookie → 401', async () => {
     expect((await http().get('/api/auth/me')).status).toBe(401);
   });

@@ -30,7 +30,8 @@ export function LoginForm() {
         return;
       }
       const body = await res.json().catch(() => ({}));
-      setError(typeof body.message === "string" ? body.message : "Đăng nhập thất bại, vui lòng thử lại.");
+      const known = (res.status === 400 || res.status === 401) && typeof body.message === "string";
+      setError(known ? body.message : "Đăng nhập thất bại, vui lòng thử lại.");
       // Theo thiết kế 01b: xóa mật khẩu đã gõ và đưa con trỏ về ô mật khẩu để nhập lại.
       if (passwordRef.current) {
         passwordRef.current.value = "";

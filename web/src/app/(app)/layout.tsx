@@ -15,8 +15,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-2 font-medium">
-            <User aria-hidden="true" className="size-5" />
-            {user.username}
+            <User aria-hidden="true" className="size-5 shrink-0" />
+            <span className="max-w-[40vw] truncate">{user.username}</span>
           </span>
           <LogoutButton />
         </div>
