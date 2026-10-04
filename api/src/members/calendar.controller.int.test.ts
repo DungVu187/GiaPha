@@ -41,6 +41,12 @@ describe('calendar API', () => {
     }
   });
 
+  it('dương lịch đủ ngày ngoài 1800–2199 → suggestion null', async () => {
+    const res = await get('calendar=SOLAR&year=1700&month=1&day=1');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ suggestion: null });
+  });
+
   it('âm lịch có ngày tháng → lấy luôn', async () => {
     const res = await get('calendar=LUNAR&year=1985&month=11&day=5');
     expect(res.status).toBe(200);

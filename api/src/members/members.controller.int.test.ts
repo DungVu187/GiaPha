@@ -447,6 +447,27 @@ describe('members API', () => {
       ).toBe(3);
     });
 
+    it('member thêm VỢ mới cho bố mình (người thân trực tiếp) → 201 và có Marriage', async () => {
+      const f = await family();
+      const { member } = await actors(f.me.id);
+      const res = await post(f.bo.id, member.cookie, {
+        relation: 'SPOUSE',
+        member: { fullName: 'lê thị mẹ', gender: 'FEMALE' },
+      });
+      expect(res.status).toBe(201);
+      const [person1Id, person2Id] = [f.bo.id, res.body.id].sort(
+        (x, y) => x - y,
+      );
+      expect(
+        await db.marriage.findUnique({
+          where: { person1Id_person2Id: { person1Id, person2Id } },
+        }),
+      ).not.toBeNull();
+      expect(
+        await db.member.findUniqueOrThrow({ where: { id: res.body.id } }),
+      ).toMatchObject({ fullName: 'LÊ THỊ MẸ', generation: 2 });
+    });
+
     it('member thêm CON mới cho chính mình → 201; thêm VỢ mới → 201 và có Marriage', async () => {
       const f = await family();
       const { member } = await actors(f.me.id);
@@ -640,6 +661,18 @@ describe('members API', () => {
       const s = await setup();
       expect((await del(s.me.id, s.wife.id, s.member.cookie)).status).toBe(204);
       expect(await db.marriage.count()).toBe(1);
+    });
+
+    it('member gỡ vợ của bố mình (người thân trực tiếp) → 204, Marriage đã xóa', async () => {
+      const s = await setup();
+      const mom = await createMember(db, {
+        fullName: 'LÊ THỊ MẸ',
+        gender: 'FEMALE',
+        generation: 2,
+      });
+      const m = await marry(db, s.bo.id, mom.id);
+      expect((await del(s.bo.id, mom.id, s.member.cookie)).status).toBe(204);
+      expect(await db.marriage.findUnique({ where: { id: m.id } })).toBeNull();
     });
 
     it('member gỡ cho người không phải người thân → 403; chưa liên kết → 403', async () => {
