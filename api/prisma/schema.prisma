@@ -13,12 +13,24 @@ enum Role {
   MEMBER
 }
 
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum CalendarType {
+  SOLAR
+  LUNAR
+}
+
 model User {
   id           Int       @id @default(autoincrement())
   username     String    @unique
   passwordHash String
   email        String?   @unique
   role         Role      @default(MEMBER)
+  memberId     Int?      @unique // một thành viên tối đa một tài khoản
+  member       Member?   @relation(fields: [memberId], references: [id], onDelete: SetNull)
   sessions     Session[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -32,4 +44,58 @@ model Session {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+model Member {
+  id                  Int           @id @default(autoincrement())
+  fullName            String // IN HOA, đã chuẩn hóa khoảng trắng; KHÔNG unique
+  searchName          String // bỏ dấu, chữ thường
+  generation          Int
+  gender              Gender?
+  isDeceased          Boolean       @default(false)
+  birthYear           Int?
+  birthMonth          Int?
+  birthDay            Int?
+  deathYear           Int?
+  deathMonth          Int?
+  deathDay            Int?
+  deathCalendar       CalendarType?
+  deathLunarLeap      Boolean       @default(false)
+  anniversaryDay      Int?
+  anniversaryMonth    Int?
+  anniversaryCalendar CalendarType?
+  burialPlace         String?
+  fatherId            Int?
+  father              Member?       @relation("FatherChildren", fields: [fatherId], references: [id], onDelete: Restrict)
+  childrenAsFather    Member[]      @relation("FatherChildren")
+  motherId            Int?
+  mother              Member?       @relation("MotherChildren", fields: [motherId], references: [id], onDelete: Restrict)
+  childrenAsMother    Member[]      @relation("MotherChildren")
+  birthOrder          Int?
+  avatarPath          String?
+  note                String?
+  user                User?
+  marriagesAsPerson1  Marriage[]    @relation("MarriagePerson1")
+  marriagesAsPerson2  Marriage[]    @relation("MarriagePerson2")
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  @@index([fatherId])
+  @@index([motherId])
+  @@index([searchName])
+  @@index([fullName, generation])
+}
+
+model Marriage {
+  id        Int      @id @default(autoincrement())
+  person1Id Int // luôn nhỏ hơn person2Id (CHECK trong migration)
+  person1   Member   @relation("MarriagePerson1", fields: [person1Id], references: [id], onDelete: Cascade)
+  person2Id Int
+  person2   Member   @relation("MarriagePerson2", fields: [person2Id], references: [id], onDelete: Cascade)
+  order     Int? // vợ cả / vợ hai...
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@unique([person1Id, person2Id])
+  @@index([person2Id])
 }

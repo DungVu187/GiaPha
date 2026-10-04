@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { fetchCurrentUser } from "./fetch-current-user";
 
 const API = "http://api.local";
-const USER = { id: 1, username: "admin", role: "ADMIN" };
+const USER = { id: 1, username: "admin", role: "ADMIN", memberId: null };
 
 function fakeFetch(status: number, body: unknown = {}) {
   return vi.fn<typeof fetch>(async () => new Response(JSON.stringify(body), { status }));

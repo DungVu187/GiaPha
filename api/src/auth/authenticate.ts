@@ -20,5 +20,10 @@ export async function authenticate(
     return null;
   }
   if (!(await verifyPassword(user.passwordHash, password))) return null;
-  return { id: user.id, username: user.username, role: user.role };
+  return {
+    id: user.id,
+    username: user.username,
+    role: user.role,
+    memberId: user.memberId,
+  };
 }

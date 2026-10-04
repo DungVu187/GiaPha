@@ -32,6 +32,7 @@ describe('auth API', () => {
       id: expect.any(Number),
       username: 'admin',
       role: 'ADMIN',
+      memberId: null,
     });
     const [cookie] = setCookies(res);
     expect(cookie).toMatch(/^giapha_session=[A-Za-z0-9_-]{43};/);
@@ -152,7 +153,11 @@ describe('auth API', () => {
     await agent.post('/api/auth/login').send(ADMIN).expect(200);
     const res = await agent.get('/api/auth/me');
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ username: 'admin', role: 'ADMIN' });
+    expect(res.body).toMatchObject({
+      username: 'admin',
+      role: 'ADMIN',
+      memberId: null,
+    });
   });
 
   it('GET /me với token giả → 401', async () => {

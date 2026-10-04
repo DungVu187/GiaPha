@@ -1,6 +1,11 @@
 export const SESSION_COOKIE = "giapha_session";
 
-export type SessionUser = { id: number; username: string; role: "ADMIN" | "MEMBER" };
+export type SessionUser = {
+  id: number;
+  username: string;
+  role: "ADMIN" | "MEMBER";
+  memberId: number | null;
+};
 
 export async function fetchCurrentUser(
   token: string | undefined,

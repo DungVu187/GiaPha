@@ -43,6 +43,7 @@ describe('session', () => {
       id: user.id,
       username: 'dungvu123',
       role: 'MEMBER',
+      memberId: null,
     });
   });
 

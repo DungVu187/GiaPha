@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { testDb as db } from '../../test/helpers/test-db.js';
+import { createMember } from '../../test/helpers/factories.js';
 import { authenticate } from './authenticate.js';
 import { hashPassword } from './password.js';
 import { seedAdmin } from './seed-admin.js';
@@ -15,6 +16,7 @@ describe('authenticate', () => {
       id: expect.any(Number),
       username: 'admin',
       role: 'ADMIN',
+      memberId: null,
     });
   });
 
@@ -22,15 +24,18 @@ describe('authenticate', () => {
     expect(await authenticate(db, '  ADMIN ', 'MatKhau@123')).not.toBeNull();
   });
 
-  it('tài khoản MEMBER đăng nhập được, role MEMBER', async () => {
+  it('tài khoản MEMBER đã liên kết đăng nhập được, trả role + memberId', async () => {
+    const member = await createMember(db);
     await db.user.create({
       data: {
         username: 'dungvu123',
         passwordHash: await hashPassword('MatKhau@123'),
+        memberId: member.id,
       },
     });
     expect(await authenticate(db, 'dungvu123', 'MatKhau@123')).toMatchObject({
       role: 'MEMBER',
+      memberId: member.id,
     });
   });
 

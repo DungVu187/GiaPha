@@ -5,7 +5,12 @@ import type { Db } from '../prisma/db.js';
 export const SESSION_COOKIE = 'giapha_session';
 export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-export type SessionUser = { id: number; username: string; role: Role };
+export type SessionUser = {
+  id: number;
+  username: string;
+  role: Role;
+  memberId: number | null;
+};
 
 export function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
@@ -34,7 +39,11 @@ export async function validateSessionToken(
   const id = hashToken(token);
   const session = await db.session.findUnique({
     where: { id },
-    include: { user: { select: { id: true, username: true, role: true } } },
+    include: {
+      user: {
+        select: { id: true, username: true, role: true, memberId: true },
+      },
+    },
   });
   if (!session) return null;
   if (session.expiresAt.getTime() <= now.getTime()) {
