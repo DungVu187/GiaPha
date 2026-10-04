@@ -53,3 +53,20 @@ export async function descendantIds(
     SELECT id FROM d WHERE id <> ${memberId}`;
   return rows.map((r) => r.id);
 }
+
+// Đối xứng descendantIds: đi ngược fatherId/motherId.
+export async function ancestorIds(
+  db: DbClient,
+  memberId: number,
+): Promise<number[]> {
+  const rows = await db.$queryRaw<{ id: number }[]>`
+    WITH RECURSIVE a(id) AS (
+      SELECT p.id FROM "Member" p JOIN "Member" c ON p.id = c."fatherId" OR p.id = c."motherId"
+        WHERE c.id = ${memberId}
+      UNION
+      SELECT p.id FROM "Member" p JOIN "Member" c ON p.id = c."fatherId" OR p.id = c."motherId"
+        JOIN a ON c.id = a.id
+    )
+    SELECT id FROM a WHERE id <> ${memberId}`;
+  return rows.map((r) => r.id);
+}

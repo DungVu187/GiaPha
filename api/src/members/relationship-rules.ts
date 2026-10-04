@@ -1,15 +1,16 @@
 import type { DbClient } from '../prisma/db.js';
 import type { FieldErrors, GenderValue } from './member-input.js';
-import { descendantIds } from './relatives.js';
+import { ancestorIds, descendantIds } from './relatives.js';
 
-// Thứ tự kiểm: chính mình → tồn tại → con cháu → giới tính.
+// Thứ tự kiểm: chính mình → tồn tại → con cháu → vòng qua vợ/chồng → giới tính.
+// selfAndDescendants: [] khi tạo người mới (chưa có con cháu, chưa có vợ/chồng).
 async function checkParent(
   db: DbClient,
   memberId: number | null,
   parentId: number,
   expected: GenderValue,
   label: 'bố' | 'mẹ',
-  descendants: () => Promise<number[]>,
+  selfAndDescendants: () => Promise<number[]>,
 ): Promise<string | null> {
   if (memberId !== null && parentId === memberId)
     return `Không thể chọn chính mình làm ${label}.`;
@@ -18,8 +19,23 @@ async function checkParent(
     select: { gender: true },
   });
   if (!parent) return `Không tìm thấy người được chọn làm ${label}.`;
-  if ((await descendants()).includes(parentId))
+  const lineage = await selfAndDescendants();
+  if (lineage.includes(parentId))
     return `Không thể chọn con cháu của mình làm ${label}.`;
+  // Bố/mẹ (hoặc tổ tiên của họ) cưới mình hoặc con cháu mình → quy tắc đời theo vợ/chồng tạo vòng.
+  if (lineage.length > 0) {
+    const parentLine = [parentId, ...(await ancestorIds(db, parentId))];
+    const crossing = await db.marriage.count({
+      where: {
+        OR: [
+          { person1Id: { in: parentLine }, person2Id: { in: lineage } },
+          { person1Id: { in: lineage }, person2Id: { in: parentLine } },
+        ],
+      },
+    });
+    if (crossing > 0)
+      return 'Không thể chọn vợ/chồng của mình hoặc của con cháu làm bố/mẹ (tạo vòng lặp).';
+  }
   if (parent.gender !== expected)
     return label === 'bố' ? 'Bố phải là nam.' : 'Mẹ phải là nữ.';
   return null;
@@ -32,8 +48,11 @@ export async function validateParents(
   motherId: number | null,
 ): Promise<FieldErrors> {
   let cached: number[] | undefined;
-  const descendants = async () =>
-    (cached ??= memberId === null ? [] : await descendantIds(db, memberId));
+  const selfAndDescendants = async () =>
+    (cached ??=
+      memberId === null
+        ? []
+        : [memberId, ...(await descendantIds(db, memberId))]);
   const errors: FieldErrors = {};
   if (fatherId !== null) {
     const e = await checkParent(
@@ -42,7 +61,7 @@ export async function validateParents(
       fatherId,
       'MALE',
       'bố',
-      descendants,
+      selfAndDescendants,
     );
     if (e) errors.fatherId = e;
   }
@@ -53,7 +72,7 @@ export async function validateParents(
       motherId,
       'FEMALE',
       'mẹ',
-      descendants,
+      selfAndDescendants,
     );
     if (e) errors.motherId = e;
   }

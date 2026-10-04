@@ -45,9 +45,8 @@ export async function propagateGenerations(
   maxSteps = DEFAULT_MAX_STEPS,
 ): Promise<void> {
   const queue = await dependentsOf(db, startId);
-  for (let steps = 0; queue.length > 0; steps++) {
-    if (steps > maxSteps)
-      throw new Error('Không tính được đời: dữ liệu quan hệ có vòng lặp.');
+  let updates = 0;
+  while (queue.length > 0) {
     const id = queue.shift() as number;
     const derived = await derivedGeneration(db, id);
     if (derived === null) continue;
@@ -56,6 +55,10 @@ export async function propagateGenerations(
       select: { generation: true },
     });
     if (derived === generation) continue;
+    // Chỉ đếm lần đổi đời thật; lượt xét không đổi bị chặn gián tiếp vì mỗi lần đổi đẩy hữu hạn người.
+    if (updates >= maxSteps)
+      throw new Error('Không tính được đời: dữ liệu quan hệ có vòng lặp.');
+    updates++;
     await db.member.update({ where: { id }, data: { generation: derived } });
     queue.push(...(await dependentsOf(db, id)));
   }

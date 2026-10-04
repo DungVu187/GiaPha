@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createMember, marry } from '../../test/helpers/factories.js';
 import { testDb as db } from '../../test/helpers/test-db.js';
 import {
+  ancestorIds,
   descendantIds,
   loadDirectRelatives,
   spouseIdsOf,
@@ -127,5 +128,27 @@ describe('descendantIds', () => {
     const b = await createMember(db, { gender: 'MALE', fatherId: a.id });
     await db.member.update({ where: { id: a.id }, data: { fatherId: b.id } });
     expect(await descendantIds(db, a.id)).toEqual([b.id]);
+  });
+});
+
+describe('ancestorIds', () => {
+  it('mọi tổ tiên theo cả bố và mẹ, không gồm chính mình, không gồm vợ/chồng', async () => {
+    const f = await family();
+    expect(asc(await ancestorIds(db, f.grandkid.id))).toEqual(
+      asc([f.me.id, f.dad.id, f.mom.id, f.grandpa.id, f.grandma.id]),
+    );
+    expect(asc(await ancestorIds(db, f.sister.id))).toEqual(
+      asc([f.dad.id, f.mom.id, f.grandpa.id, f.grandma.id]),
+    );
+  });
+  it('người không có bố mẹ → []', async () => {
+    const f = await family();
+    expect(await ancestorIds(db, f.grandpa.id)).toEqual([]);
+  });
+  it('dữ liệu lỗi có vòng → không lặp vô hạn, không gồm chính mình', async () => {
+    const a = await createMember(db, { gender: 'MALE' });
+    const b = await createMember(db, { gender: 'MALE', fatherId: a.id });
+    await db.member.update({ where: { id: a.id }, data: { fatherId: b.id } });
+    expect(await ancestorIds(db, a.id)).toEqual([b.id]);
   });
 });

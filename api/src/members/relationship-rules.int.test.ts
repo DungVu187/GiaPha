@@ -48,6 +48,73 @@ describe('validateParents', () => {
       motherId: 'Không thể chọn con cháu của mình làm mẹ.',
     });
   });
+
+  const LOOP =
+    'Không thể chọn vợ/chồng của mình hoặc của con cháu làm bố/mẹ (tạo vòng lặp).';
+
+  it('chọn vợ/chồng của mình làm bố/mẹ → lỗi vòng lặp', async () => {
+    const husband = await createMember(db, { gender: 'MALE' });
+    const wife = await createMember(db, { gender: 'FEMALE' });
+    await marry(db, husband.id, wife.id);
+    expect(await validateParents(db, wife.id, husband.id, null)).toEqual({
+      fatherId: LOOP,
+    });
+    expect(await validateParents(db, husband.id, null, wife.id)).toEqual({
+      motherId: LOOP,
+    });
+  });
+
+  it('dạng dài: con của chồng làm bố của vợ / vợ của con trai làm mẹ của mình → lỗi vòng lặp', async () => {
+    const x = await createMember(db, { gender: 'MALE', generation: 1 });
+    const y = await createMember(db, { gender: 'FEMALE', generation: 1 });
+    await marry(db, x.id, y.id);
+    const s = await createMember(db, {
+      gender: 'MALE',
+      generation: 2,
+      fatherId: x.id,
+    });
+    expect(await validateParents(db, y.id, s.id, null)).toEqual({
+      fatherId: LOOP,
+    });
+
+    const m = await createMember(db, { gender: 'MALE', generation: 1 });
+    const son = await createMember(db, {
+      gender: 'MALE',
+      generation: 2,
+      fatherId: m.id,
+    });
+    const daughterInLaw = await createMember(db, { gender: 'FEMALE' });
+    await marry(db, son.id, daughterInLaw.id);
+    expect(await validateParents(db, m.id, null, daughterInLaw.id)).toEqual({
+      motherId: LOOP,
+    });
+  });
+
+  it('thông gia / bố mẹ người ngoài cho vợ → hợp lệ, không chặn nhầm', async () => {
+    const x = await createMember(db, { gender: 'MALE', generation: 1 });
+    const y = await createMember(db, { gender: 'FEMALE', generation: 1 });
+    await marry(db, x.id, y.id);
+    const outsiderFather = await createMember(db, { gender: 'MALE' });
+    expect(await validateParents(db, y.id, outsiderFather.id, null)).toEqual(
+      {},
+    );
+
+    // Con trai của m cưới con gái của inLaw; gắn inLaw làm bố của m không tạo vòng.
+    const m = await createMember(db, { gender: 'MALE', generation: 2 });
+    const son = await createMember(db, {
+      gender: 'MALE',
+      generation: 3,
+      fatherId: m.id,
+    });
+    const inLaw = await createMember(db, { gender: 'MALE', generation: 1 });
+    const inLawDaughter = await createMember(db, {
+      gender: 'FEMALE',
+      generation: 2,
+      fatherId: inLaw.id,
+    });
+    await marry(db, son.id, inLawDaughter.id);
+    expect(await validateParents(db, m.id, inLaw.id, null)).toEqual({});
+  });
 });
 
 describe('validateSpouse', () => {

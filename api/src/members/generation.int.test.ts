@@ -135,4 +135,34 @@ describe('propagateGenerations', () => {
       'Không tính được đời: dữ liệu quan hệ có vòng lặp.',
     );
   });
+
+  it('maxSteps chỉ đếm lần đổi đời thật, không đếm lượt xét mà đời giữ nguyên', async () => {
+    const setup = async () => {
+      const ong = await createMember(db, { gender: 'MALE', generation: 1 });
+      const gai = await createMember(db, {
+        gender: 'FEMALE',
+        generation: 2,
+        fatherId: ong.id,
+      });
+      const re = await createMember(db, { gender: 'MALE', generation: 2 });
+      await marry(db, gai.id, re.id);
+      await createMember(db, {
+        generation: 3,
+        fatherId: re.id,
+        motherId: gai.id,
+      });
+      await db.member.update({
+        where: { id: ong.id },
+        data: { generation: 5 },
+      });
+      return ong.id;
+    };
+    // 3 lần đổi đời (gái, rể, cháu) trong 5 lượt xét.
+    await expect(propagateGenerations(db, await setup(), 3)).resolves.toBe(
+      undefined,
+    );
+    await expect(propagateGenerations(db, await setup(), 2)).rejects.toThrow(
+      'Không tính được đời: dữ liệu quan hệ có vòng lặp.',
+    );
+  });
 });
