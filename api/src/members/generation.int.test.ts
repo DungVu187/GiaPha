@@ -131,8 +131,8 @@ describe('propagateGenerations', () => {
       fatherId: a.id,
     });
     await db.member.update({ where: { id: a.id }, data: { fatherId: b.id } });
-    await expect(propagateGenerations(db, a.id)).rejects.toThrow(
+    await expect(propagateGenerations(db, a.id, 50)).rejects.toThrow(
       'Không tính được đời: dữ liệu quan hệ có vòng lặp.',
     );
-  }, 120_000);
+  });
 });
