@@ -34,6 +34,8 @@ export type MemberInput = {
 };
 export type FieldErrors = Record<string, string>;
 
+// Giới hạn cột Int (32-bit) của Prisma/Postgres.
+const MAX_INT32 = 2147483647;
 const EMPTY_DATE: PartialDate = { year: null, month: null, day: null };
 const CALENDARS = ['SOLAR', 'LUNAR'] as const;
 
@@ -259,7 +261,7 @@ export function parseMemberInput(
     raw,
     'fatherId',
     1,
-    Number.MAX_SAFE_INTEGER,
+    MAX_INT32,
     'Mã thành viên không hợp lệ.',
     errors,
   );
@@ -267,7 +269,7 @@ export function parseMemberInput(
     raw,
     'motherId',
     1,
-    Number.MAX_SAFE_INTEGER,
+    MAX_INT32,
     'Mã thành viên không hợp lệ.',
     errors,
   );

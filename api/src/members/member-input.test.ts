@@ -79,6 +79,20 @@ describe('parseMemberInput — cơ bản', () => {
     expect(errorsOf(body)[key]).toBe(msg);
   });
 
+  it.each([
+    ['fatherId', 'Mã thành viên không hợp lệ.'],
+    ['motherId', 'Mã thành viên không hợp lệ.'],
+    ['generation', 'Đời phải là số nguyên từ 1 đến 200.'],
+    ['birthOrder', 'Thứ tự phải là số nguyên từ 1 đến 99.'],
+  ])('%s vượt 32-bit → lỗi', (key, msg) => {
+    expect(errorsOf({ ...base, [key]: 2147483648 })[key]).toBe(msg);
+  });
+
+  it('fatherId/motherId = 2147483647 hợp lệ', () => {
+    const v = valueOf({ ...base, fatherId: 2147483647, motherId: 2147483646 });
+    expect([v.fatherId, v.motherId]).toEqual([2147483647, 2147483646]);
+  });
+
   it('gom nhiều lỗi một lần', () => {
     expect(
       Object.keys(errorsOf({ fullName: '', gender: 'X', generation: 0 })),
