@@ -1,7 +1,9 @@
 import type { DbClient } from '../prisma/db.js';
+import { MAX_GENERATION } from './member-input.js';
 import { spouseIdsOf } from './relatives.js';
 
 const DEFAULT_MAX_STEPS = 10_000;
+const LOOP_ERROR = 'Không tính được đời: dữ liệu quan hệ có vòng lặp.';
 
 // null = không suy ra được, đời phải nhập tay.
 export async function derivedGeneration(
@@ -56,8 +58,10 @@ export async function propagateGenerations(
     });
     if (derived === generation) continue;
     // Chỉ đếm lần đổi đời thật; lượt xét không đổi bị chặn gián tiếp vì mỗi lần đổi đẩy hữu hạn người.
-    if (updates >= maxSteps)
-      throw new Error('Không tính được đời: dữ liệu quan hệ có vòng lặp.');
+    // Vòng qua vợ/chồng ngoài họ không bị validate chặn hết → đời tăng mãi; vượt giới hạn là có vòng.
+    // maxSteps là chốt dự phòng.
+    if (derived > MAX_GENERATION || updates >= maxSteps)
+      throw new Error(LOOP_ERROR);
     updates++;
     await db.member.update({ where: { id }, data: { generation: derived } });
     queue.push(...(await dependentsOf(db, id)));

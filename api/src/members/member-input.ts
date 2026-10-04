@@ -34,6 +34,8 @@ export type MemberInput = {
 };
 export type FieldErrors = Record<string, string>;
 
+export const MAX_GENERATION = 200;
+
 // Giới hạn cột Int (32-bit) của Prisma/Postgres.
 const MAX_INT32 = 2147483647;
 const EMPTY_DATE: PartialDate = { year: null, month: null, day: null };
@@ -161,8 +163,8 @@ export function parseMemberInput(
     raw,
     'generation',
     1,
-    200,
-    'Đời phải là số nguyên từ 1 đến 200.',
+    MAX_GENERATION,
+    `Đời phải là số nguyên từ 1 đến ${MAX_GENERATION}.`,
     errors,
   );
   const birthOrder = rangedInt(

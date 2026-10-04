@@ -136,6 +136,39 @@ describe('propagateGenerations', () => {
     );
   });
 
+  it('vòng qua hai cặp vợ chồng ngoài họ (lọt qua validate) → báo lỗi nhanh khi đời vượt giới hạn', async () => {
+    // Y1 cưới S1 (trước) và R; C con Y1+R; S2 con C; Y2 cưới S2; rồi mẹ của S1 = Y2.
+    // Vòng: Y2 ← S2 ← C ← Y1 (theo vợ đầu S1) ← S1 ← Y2.
+    const y1 = await createMember(db, { gender: 'MALE', generation: 1 });
+    const s1 = await createMember(db, { gender: 'FEMALE', generation: 1 });
+    await marry(db, y1.id, s1.id);
+    const r = await createMember(db, { gender: 'FEMALE', generation: 1 });
+    await marry(db, y1.id, r.id);
+    const c = await createMember(db, {
+      gender: 'MALE',
+      generation: 2,
+      fatherId: y1.id,
+      motherId: r.id,
+    });
+    const s2 = await createMember(db, {
+      gender: 'MALE',
+      generation: 3,
+      fatherId: c.id,
+    });
+    const y2 = await createMember(db, { gender: 'FEMALE', generation: 3 });
+    await marry(db, y2.id, s2.id);
+    await db.member.update({
+      where: { id: s1.id },
+      data: { motherId: y2.id, generation: 4 },
+    });
+
+    const started = Date.now();
+    await expect(propagateGenerations(db, s1.id)).rejects.toThrow(
+      'Không tính được đời: dữ liệu quan hệ có vòng lặp.',
+    );
+    expect(Date.now() - started).toBeLessThan(5000);
+  });
+
   it('maxSteps chỉ đếm lần đổi đời thật, không đếm lượt xét mà đời giữ nguyên', async () => {
     const setup = async () => {
       const ong = await createMember(db, { gender: 'MALE', generation: 1 });
