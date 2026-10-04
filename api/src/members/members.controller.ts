@@ -1,21 +1,33 @@
 import {
+  type ArgumentsHost,
+  BadRequestException,
   Body,
+  Catch,
   Controller,
   Delete,
+  type ExceptionFilter,
   Get,
   HttpCode,
   Param,
+  PayloadTooLargeException,
   Post,
   Put,
   Query,
+  UploadedFile,
+  UseFilters,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import type { SessionUser } from '../auth/session.js';
 import { todayInVietnam } from '../lib/anniversary.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { MAX_AVATAR_BYTES, removeAvatarFile } from './avatar.js';
 import { parseMemberInput, type MemberInput } from './member-input.js';
 import {
   addRelative,
+  clearAvatar,
   createMember,
   deleteMember,
   getMemberDetail,
@@ -23,6 +35,7 @@ import {
   NOT_FOUND,
   removeSpouse,
   searchMembers,
+  setAvatar,
   ServiceError,
   updateMember,
   type RelationKind,
@@ -33,6 +46,7 @@ const RELATIONS: readonly unknown[] = ['FATHER', 'MOTHER', 'SPOUSE', 'CHILD'];
 const MAX_INT32 = 2147483647;
 const BAD_TARGET = { target: 'Chọn người có sẵn hoặc nhập người mới.' };
 const BAD_QUERY = { query: 'Tham số tìm kiếm không hợp lệ.' };
+const NO_FILE = { file: 'Vui lòng chọn ảnh.' };
 
 const isPositiveInt32 = (v: unknown): v is number =>
   typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= MAX_INT32;
@@ -65,6 +79,17 @@ function optionalParam<T>(
   const v = parse(raw);
   if (v === null) throw new ServiceError(400, INVALID, BAD_QUERY);
   return v;
+}
+
+// Lỗi multer trên route upload ảnh: quá cỡ → 413; multipart sai (sai tên trường, nhiều file…) → 400.
+@Catch(PayloadTooLargeException, BadRequestException)
+export class AvatarUploadErrorFilter implements ExceptionFilter {
+  catch(error: Error, host: ArgumentsHost): void {
+    const res = host.switchToHttp().getResponse<Response>();
+    if (error instanceof PayloadTooLargeException)
+      res.status(413).json({ message: 'Ảnh tối đa 5 MB.' });
+    else res.status(400).json({ message: INVALID, errors: NO_FILE });
+  }
 }
 
 @Controller('members')
@@ -113,8 +138,36 @@ export class MembersController {
     @CurrentUser() user: SessionUser,
     @Param('id') id: string,
   ): Promise<void> {
-    await deleteMember(this.prisma, user, parseId(id));
-    // Task 11: xóa file ảnh trả về từ deleteMember.
+    const { avatarPath } = await deleteMember(this.prisma, user, parseId(id));
+    await removeAvatarFile(avatarPath);
+  }
+
+  // multer giữ file trong bộ nhớ (không ghi đĩa); service kiểm quyền rồi mới lưu.
+  @Post(':id/avatar')
+  @HttpCode(200)
+  @UseFilters(AvatarUploadErrorFilter)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: MAX_AVATAR_BYTES, files: 1 },
+    }),
+  )
+  uploadAvatar(
+    @CurrentUser() user: SessionUser,
+    @Param('id') id: string,
+    @UploadedFile() file?: { buffer: Buffer },
+  ) {
+    const memberId = parseId(id);
+    if (!file) throw new ServiceError(400, INVALID, NO_FILE);
+    return setAvatar(this.prisma, user, memberId, file.buffer);
+  }
+
+  @Delete(':id/avatar')
+  @HttpCode(204)
+  async deleteAvatar(
+    @CurrentUser() user: SessionUser,
+    @Param('id') id: string,
+  ): Promise<void> {
+    await clearAvatar(this.prisma, user, parseId(id));
   }
 
   @Post(':id/relatives')

@@ -3,6 +3,7 @@ import { nextAnniversary, type NextAnniversary } from '../lib/anniversary.js';
 import { normalizeFullName, toSearchName } from '../lib/name.js';
 import type { SimpleDate } from '../lib/partial-date.js';
 import type { Db, DbClient } from '../prisma/db.js';
+import { detectImageType, removeAvatarFile, saveAvatarFile } from './avatar.js';
 import {
   derivedGeneration,
   LOOP_ERROR,
@@ -413,6 +414,39 @@ export async function removeSpouse(
     await syncGeneration(tx, id);
     await syncGeneration(tx, spouseId);
   });
+}
+
+// Quyền như sửa thành viên. Kiểm 404 → 403 → định dạng trước khi ghi file xuống đĩa.
+export async function setAvatar(
+  db: Db,
+  actor: Actor,
+  id: number,
+  buf: Buffer,
+): Promise<{ avatarPath: string }> {
+  const member = await requireExists(db, id);
+  await requireCanEdit(db, actor, id);
+  if (!detectImageType(buf))
+    throw invalid({ file: 'Chỉ nhận ảnh JPG, PNG hoặc WebP.' });
+  const avatarPath = await saveAvatarFile(buf, id);
+  try {
+    await db.member.update({ where: { id }, data: { avatarPath } });
+  } catch (e) {
+    await removeAvatarFile(avatarPath);
+    throw e;
+  }
+  await removeAvatarFile(member.avatarPath);
+  return { avatarPath };
+}
+
+export async function clearAvatar(
+  db: Db,
+  actor: Actor,
+  id: number,
+): Promise<void> {
+  const member = await requireExists(db, id);
+  await requireCanEdit(db, actor, id);
+  await db.member.update({ where: { id }, data: { avatarPath: null } });
+  await removeAvatarFile(member.avatarPath);
 }
 
 const nullsLast = (a: number | null, b: number | null) =>

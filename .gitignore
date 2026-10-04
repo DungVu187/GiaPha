@@ -22,3 +22,6 @@ dist/
 playwright-report/
 test-results/
 *.tsbuildinfo
+
+# Ảnh người dùng tải lên
+uploads/

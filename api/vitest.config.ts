@@ -1,4 +1,6 @@
 import 'dotenv/config';
+import os from 'node:os';
+import path from 'node:path';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
@@ -22,7 +24,11 @@ export default defineConfig({
           globalSetup: ['./test/global-setup.ts'],
           setupFiles: ['./test/setup-integration.ts'],
           fileParallelism: false,
-          env: { DATABASE_URL: process.env.TEST_DATABASE_URL ?? '' },
+          env: {
+            DATABASE_URL: process.env.TEST_DATABASE_URL ?? '',
+            // Ảnh upload trong test ghi vào thư mục tạm, không đụng api/uploads.
+            UPLOADS_DIR: path.join(os.tmpdir(), 'giapha-test-uploads'),
+          },
         },
       },
     ],
