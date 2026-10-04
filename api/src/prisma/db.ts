@@ -1,7 +1,9 @@
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '../generated/prisma/client.js';
+import { type Prisma, PrismaClient } from '../generated/prisma/client.js';
 
 export type Db = PrismaClient;
+// Client thường hoặc client trong transaction — hàm nghiệp vụ nhận kiểu này.
+export type DbClient = Db | Prisma.TransactionClient;
 
 export function databaseUrl(
   url: string | undefined = process.env.DATABASE_URL,
