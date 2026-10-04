@@ -36,7 +36,7 @@ export function LogoutButton() {
       {error && (
         <p
           role="alert"
-          className="fixed inset-x-0 top-16 z-10 border-b border-destructive bg-primary-soft px-4 py-2 text-sm font-medium text-destructive sm:top-[72px] sm:px-10"
+          className="fixed inset-x-0 top-[104px] z-10 border-b border-destructive bg-primary-soft px-4 py-2 text-sm font-medium text-destructive sm:top-[72px] sm:px-10"
         >
           {error}
         </p>
