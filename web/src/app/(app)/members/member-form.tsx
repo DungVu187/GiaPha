@@ -16,13 +16,13 @@ import {
   toMemberBody,
 } from "@/lib/member-form";
 import type { CalendarType } from "@/lib/member-types";
+import { formatAnniversaryLong } from "@/lib/format";
 import { normalizeFullName } from "@/lib/name";
 
 type Errors = Partial<Record<string, string>>;
 type Suggestion = { day: number; month: number; calendar: CalendarType };
 
 const SUGGEST_DEBOUNCE_MS = 400;
-const calendarName = (c: CalendarType) => (c === "LUNAR" ? "Âm lịch" : "Dương lịch");
 
 // Khóa lỗi của API (theo thứ tự trên form) → id ô nhận focus.
 const ERROR_FOCUS: [string, string][] = [
@@ -453,7 +453,7 @@ export function MemberForm({
               <div className="flex flex-col gap-3 rounded-md border border-accent bg-accent/15 px-4 py-3 sm:flex-row sm:items-center">
                 <Lightbulb aria-hidden="true" className="size-5 shrink-0 text-accent-text" />
                 <p className="flex-1 font-medium">
-                  Gợi ý từ ngày mất: giỗ ngày {suggestion.day}/{suggestion.month} {calendarName(suggestion.calendar)}.
+                  Gợi ý từ ngày mất: giỗ ngày {formatAnniversaryLong(suggestion.day, suggestion.month, suggestion.calendar)}.
                 </p>
                 <Button
                   type="button"
