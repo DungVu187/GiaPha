@@ -2,6 +2,7 @@
 *.md
 !/AGENTS.md
 !/CLAUDE.md
+!/README.md
 
 # Cấu hình Claude Code cá nhân
 .claude/settings.local.json

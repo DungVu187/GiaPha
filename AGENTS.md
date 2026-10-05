@@ -12,7 +12,7 @@ Website gia phả cho dòng họ Vũ: đăng ký/đăng nhập, liên kết tài
 2. `yeu-cau-he-thong-gia-pha.md` — tài liệu yêu cầu gốc (nghiệp vụ, giao diện, ví dụ hiển thị).
 3. `docs/superpowers/plans/` — plan triển khai từng giai đoạn (nếu có).
 
-**Các file `.md` trên chỉ lưu trên máy người dùng, KHÔNG có trên GitHub** (`.gitignore` chặn mọi `*.md` trừ `AGENTS.md`, `CLAUDE.md`). Clone repo về mà không thấy spec → hỏi người dùng, đừng đoán. Không bao giờ commit/push file `.md` nào khác hai file này.
+**Các file `.md` trên chỉ lưu trên máy người dùng, KHÔNG có trên GitHub** (`.gitignore` chặn mọi `*.md` trừ `AGENTS.md`, `CLAUDE.md`, `README.md`). Clone repo về mà không thấy spec → hỏi người dùng, đừng đoán. Không bao giờ commit/push file `.md` nào khác ba file này.
 
 Mâu thuẫn giữa code và spec → dừng lại hỏi người dùng, không tự chọn.
 Muốn đổi một quyết định đã chốt (bảng D1–D16 trong spec) → hỏi người dùng trước.
@@ -109,7 +109,7 @@ Chi tiết đầy đủ ở spec mục 3–6. Những điểm hay bị làm sai:
 1. Mỗi giai đoạn: viết plan vào `docs/superpowers/plans/` → người dùng duyệt → mới code.
 2. Viết test trước, rồi code (TDD).
 3. Xong một việc: chạy lint + typecheck + test + build, báo kết quả thật (kể cả khi lỗi). CI phải xanh.
-4. Commit nhỏ, message rõ ràng. Chỉ commit/push khi người dùng yêu cầu. Chỉ push code (+ `AGENTS.md`, `CLAUDE.md`); spec/plan/tài liệu `.md` giữ local. Remote: `https://github.com/DungVu187/GiaPha.git`, nhánh `main`.
+4. Commit nhỏ, message rõ ràng. Chỉ commit/push khi người dùng yêu cầu. Chỉ push code (+ `AGENTS.md`, `CLAUDE.md`, `README.md`); spec/plan/tài liệu `.md` giữ local. Remote: `https://github.com/DungVu187/GiaPha.git`, nhánh `main`.
 5. Xong giai đoạn: cập nhật bảng "Trạng thái hiện tại" ở trên.
 
 ## Lệnh thường dùng
