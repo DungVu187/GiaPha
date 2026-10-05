@@ -63,7 +63,7 @@ function FieldError({ id, error }: { id: string; error?: string }) {
 }
 
 // Nhóm nút bật/tắt kiểu "segmented" (Figma SegmentItem), mỗi nút có aria-pressed.
-function Segmented<T extends string>({
+export function Segmented<T extends string>({
   label,
   idPrefix,
   options,
