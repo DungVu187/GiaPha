@@ -1,12 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { E2E_ADMIN } from "./fixtures";
-
-async function login(page: Page, username: string, password: string) {
-  await page.goto("/login");
-  await page.getByLabel("Tên đăng nhập").fill(username);
-  await page.getByLabel("Mật khẩu").fill(password);
-  await page.getByRole("button", { name: "Đăng nhập" }).click();
-}
+import { login } from "./helpers";
 
 test("chưa đăng nhập vào / bị chuyển sang /login", async ({ page }) => {
   await page.goto("/");

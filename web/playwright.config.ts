@@ -1,4 +1,6 @@
 import { existsSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
 // Lấy TEST_DATABASE_URL từ api/.env khi chạy local; CI truyền qua env.
@@ -26,7 +28,11 @@ export default defineConfig({
       command: "npm --prefix ../api run start:prod",
       url: "http://localhost:4000/api/health",
       reuseExistingServer: false,
-      env: { DATABASE_URL: TEST_DATABASE_URL, PORT: "4000" },
+      env: {
+        DATABASE_URL: TEST_DATABASE_URL,
+        PORT: "4000",
+        UPLOADS_DIR: path.join(os.tmpdir(), "giapha-e2e-uploads"),
+      },
     },
     {
       command: "npx next start -p 3000",

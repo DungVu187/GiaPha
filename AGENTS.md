@@ -19,13 +19,13 @@ Muốn đổi một quyết định đã chốt (bảng D1–D16 trong spec) →
 
 ## Trạng thái hiện tại
 
-- GĐ1 xong. Bước tiếp theo: plan GĐ2.
+- GĐ1, GĐ2 xong. Bước tiếp theo: plan GĐ3.
 - Cập nhật mục này khi xong mỗi giai đoạn.
 
 | GĐ | Nội dung | Trạng thái |
 |---|---|---|
 | 1 | Khung NestJS (`api/`) + Next.js (`web/`), Postgres, Prisma, seed admin, đăng nhập session, `/api/health`, CI | Xong |
-| 2 | CRUD thành viên, quan hệ, đời, ngày giỗ + lịch âm, phân quyền, ảnh | Chưa làm |
+| 2 | CRUD thành viên, quan hệ, đời, ngày giỗ + lịch âm, phân quyền, ảnh | Xong |
 | 3 | Đăng ký + phát hiện trùng + "Đây là tôi" | Chưa làm |
 | 4 | Cây gia phả (React Flow) | Chưa làm |
 | 5 | Danh sách theo đời, tìm kiếm, lịch giỗ, dashboard | Chưa làm |
@@ -130,3 +130,5 @@ Lần đầu trên máy mới (Postgres 18 native đã cài):
 | `web/` | `npm --prefix ../api run build && npm run build && npm run test:e2e` | e2e Playwright (tắt dev server trước: Playwright tự chạy api + web trên cổng 4000/3000; DB `giapha_test`) |
 | `api/` | `npm run db:migrate` | tạo/áp migration (DB dev) |
 | `api/` | `npm run db:seed` | tạo admin từ `ADMIN_USERNAME` / `ADMIN_PASSWORD` |
+
+Ảnh lưu ở `api/uploads/` (đổi bằng `UPLOADS_DIR`); dev: API phục vụ `/uploads`, prod: Nginx.
