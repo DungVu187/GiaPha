@@ -55,6 +55,22 @@ describe('calendar API', () => {
     });
   });
 
+  it('âm lịch đủ ngày 30 nhưng tháng đó chỉ có 29 ngày → suggestion null', async () => {
+    // Tháng Giêng năm Canh Tý 2020 thiếu (29 ngày); tháng Hai đủ (30 ngày).
+    const missing = await get('calendar=LUNAR&year=2020&month=1&day=30');
+    expect(missing.status).toBe(200);
+    expect(missing.body).toEqual({ suggestion: null });
+    const exists = await get('calendar=LUNAR&year=2020&month=2&day=30');
+    expect(exists.body).toEqual({
+      suggestion: { day: 30, month: 2, calendar: 'LUNAR' },
+    });
+    // Năm ngoài 1800–2199 → không kiểm được, vẫn gợi ý như cũ.
+    const outOfRange = await get('calendar=LUNAR&year=1700&month=1&day=30');
+    expect(outOfRange.body).toEqual({
+      suggestion: { day: 30, month: 1, calendar: 'LUNAR' },
+    });
+  });
+
   it.each([
     'year=1998',
     'calendar=GREGORIAN&year=1998',

@@ -1,6 +1,8 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { suggestAnniversary, todayInVietnam } from '../lib/anniversary.js';
+import { isLunarSupportedYear, lunarToSolar } from '../lib/lunar.js';
 import {
+  isCompleteDate,
   validateLunarPartialDate,
   validateSolarPartialDate,
   type PartialDate,
@@ -36,6 +38,15 @@ export class CalendarController {
         ? validateSolarPartialDate(date, today)
         : validateLunarPartialDate(date, today);
     if (error) throw new ServiceError(400, INVALID, { date: error });
+    // Ngày âm đủ ba phần nhưng không tồn tại (ngày 30 của tháng thiếu): không gợi ý, vì
+    // lưu với ngày mất này sẽ bị 400 — cùng kiểm tra như member-input (form không gửi tháng nhuận).
+    if (
+      calendar === 'LUNAR' &&
+      isCompleteDate(date) &&
+      isLunarSupportedYear(date.year) &&
+      lunarToSolar({ ...date, leap: false }) === null
+    )
+      return { suggestion: null };
     return { suggestion: suggestAnniversary(date, calendar) };
   }
 }

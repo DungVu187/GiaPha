@@ -197,7 +197,7 @@ export function lunarToSolar(date: LunarDate): SimpleDate | null {
   if (b11 - a11 > 365) {
     const leapOff = getLeapMonthOffset(a11, tz);
     let leapMonth = leapOff - 2;
-    if (leapMonth < 0) leapMonth += 12;
+    if (leapMonth <= 0) leapMonth += 12;
     if (date.leap && date.month !== leapMonth) return null;
     if (date.leap || off >= leapOff) off += 1;
   } else if (date.leap) {
@@ -220,7 +220,7 @@ export function lunarToSolar(date: LunarDate): SimpleDate | null {
 function leapMonthInSpan(a11: number, b11: number, tz: number): number {
   if (b11 - a11 <= 365) return 0;
   const leapMonth = getLeapMonthOffset(a11, tz) - 2;
-  return leapMonth < 0 ? leapMonth + 12 : leapMonth;
+  return leapMonth <= 0 ? leapMonth + 12 : leapMonth;
 }
 
 export function leapMonthOfYear(lunarYear: number): number {
