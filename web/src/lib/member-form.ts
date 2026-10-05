@@ -120,3 +120,20 @@ export function parentGenerationPreview(s: MemberFormState): number | null {
   if (s.mother) return s.mother.generation + 1;
   return null;
 }
+
+export type PickerKeyAction = { preventDefault: boolean; open?: boolean; active?: number; choose?: number };
+
+// Phím trong ô chọn người. Enter KHÔNG BAO GIỜ được submit form: lỡ Enter sau khi "Bỏ chọn bố"
+// sẽ lưu fatherId null → mất quan hệ âm thầm.
+export function pickerKeyAction(
+  key: string,
+  { count, active, listOpen }: { count: number; active: number; listOpen: boolean },
+): PickerKeyAction {
+  if (key === "Enter") {
+    return listOpen && active >= 0 && active < count ? { preventDefault: true, choose: active } : { preventDefault: true };
+  }
+  if (key === "ArrowDown" && count) return { preventDefault: true, open: true, active: (active + 1) % count };
+  if (key === "ArrowUp" && count) return { preventDefault: true, open: true, active: active <= 0 ? count - 1 : active - 1 };
+  if (key === "Escape" && listOpen) return { preventDefault: true, open: false };
+  return { preventDefault: false };
+}

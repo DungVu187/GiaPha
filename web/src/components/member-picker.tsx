@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { MemberAvatar } from "@/components/member-avatar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import type { PickedMember } from "@/lib/member-form";
+import { type PickedMember, pickerKeyAction } from "@/lib/member-form";
 import type { Gender, SearchResult } from "@/lib/member-types";
 
 const DEBOUNCE_MS = 250;
@@ -141,22 +141,11 @@ export function MemberPicker({
           onBlur={() => setOpen(false)}
           onFocus={() => results && setOpen(true)}
           onKeyDown={(e) => {
-            const n = results?.length ?? 0;
-            if (e.key === "ArrowDown" && n) {
-              e.preventDefault();
-              setOpen(true);
-              setActive((a) => (a + 1) % n);
-            } else if (e.key === "ArrowUp" && n) {
-              e.preventDefault();
-              setOpen(true);
-              setActive((a) => (a <= 0 ? n - 1 : a - 1));
-            } else if (e.key === "Enter" && showList && results && active >= 0) {
-              e.preventDefault();
-              choose(results[active]);
-            } else if (e.key === "Escape" && showList) {
-              e.preventDefault();
-              setOpen(false);
-            }
+            const act = pickerKeyAction(e.key, { count: results?.length ?? 0, active, listOpen: showList });
+            if (act.preventDefault) e.preventDefault();
+            if (act.choose !== undefined && results) choose(results[act.choose]);
+            if (act.open !== undefined) setOpen(act.open);
+            if (act.active !== undefined) setActive(act.active);
           }}
           className="h-12 w-full min-w-0 rounded-md border border-input bg-card pr-4 pl-11 text-base outline-none placeholder:text-muted-foreground focus-visible:border-2 focus-visible:border-ring aria-invalid:border-destructive"
         />

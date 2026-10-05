@@ -2,8 +2,9 @@ import { expect, test } from "@playwright/test";
 import { E2E_MEMBER, E2E_VIEWER } from "./fixtures";
 import { loginAndWait, memberIdByName } from "./helpers";
 
-// Test "thêm con" ghi dữ liệu và CI có retries → chạy tuần tự, đúng thứ tự.
-test.describe.configure({ mode: "serial" });
+// Test "thêm con" ghi dữ liệu → chạy tuần tự, đúng thứ tự.
+// Không retry: chạy lại cả nhóm trên DB không reset sẽ tạo trùng tên → chắc chắn đỏ.
+test.describe.configure({ mode: "serial", retries: 0 });
 
 test("member_e2e: nút hiển thị theo người thân trực tiếp", async ({ page }) => {
   await loginAndWait(page, E2E_MEMBER.username, E2E_MEMBER.password);

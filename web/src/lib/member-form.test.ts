@@ -4,6 +4,7 @@ import {
   memberFormFromDetail,
   parentGenerationPreview,
   parseNumberField,
+  pickerKeyAction,
   toMemberBody,
 } from "./member-form";
 import type { MemberDetail } from "./member-types";
@@ -188,5 +189,42 @@ describe("memberFormFromDetail", () => {
     const s = memberFormFromDetail(d);
     expect(s).toMatchObject({ deathCalendar: "SOLAR", anniversaryCalendar: "LUNAR", note: "" });
     expect(toMemberBody(s)).toMatchObject({ fatherId: 1, motherId: null });
+  });
+});
+
+describe("pickerKeyAction", () => {
+  const s = (count: number, active: number, listOpen: boolean) => ({ count, active, listOpen });
+
+  it("Enter với mục đang chọn trong danh sách mở → chọn mục đó", () => {
+    expect(pickerKeyAction("Enter", s(3, 1, true))).toEqual({ preventDefault: true, choose: 1 });
+  });
+
+  it.each([
+    ["danh sách đóng", s(3, 1, false)],
+    ["chưa chọn mục nào", s(3, -1, true)],
+    ["không có kết quả", s(0, -1, true)],
+    ["chưa tìm gì", s(0, -1, false)],
+  ])("Enter khi %s → không submit form, không chọn gì", (_, state) => {
+    expect(pickerKeyAction("Enter", state)).toEqual({ preventDefault: true });
+  });
+
+  it("ArrowDown/ArrowUp xoay vòng và mở danh sách", () => {
+    expect(pickerKeyAction("ArrowDown", s(3, -1, false))).toEqual({ preventDefault: true, open: true, active: 0 });
+    expect(pickerKeyAction("ArrowDown", s(3, 2, true))).toEqual({ preventDefault: true, open: true, active: 0 });
+    expect(pickerKeyAction("ArrowUp", s(3, 0, true))).toEqual({ preventDefault: true, open: true, active: 2 });
+    expect(pickerKeyAction("ArrowUp", s(3, -1, true))).toEqual({ preventDefault: true, open: true, active: 2 });
+  });
+
+  it("mũi tên khi không có kết quả → bỏ qua", () => {
+    expect(pickerKeyAction("ArrowDown", s(0, -1, false))).toEqual({ preventDefault: false });
+  });
+
+  it("Escape đóng danh sách đang mở; khi đóng thì bỏ qua", () => {
+    expect(pickerKeyAction("Escape", s(3, 0, true))).toEqual({ preventDefault: true, open: false });
+    expect(pickerKeyAction("Escape", s(3, 0, false))).toEqual({ preventDefault: false });
+  });
+
+  it("phím khác → bỏ qua", () => {
+    expect(pickerKeyAction("a", s(3, 0, true))).toEqual({ preventDefault: false });
   });
 });

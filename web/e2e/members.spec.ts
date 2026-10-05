@@ -3,7 +3,8 @@ import { E2E_ADMIN } from "./fixtures";
 import { loginAndWait, memberIdByName } from "./helpers";
 
 // Các test dựa vào dữ liệu do test trước tạo (cụ → con → cháu) nên chạy tuần tự.
-test.describe.configure({ mode: "serial" });
+// Không retry: chạy lại cả nhóm trên DB không reset sẽ tạo trùng tên → chắc chắn đỏ.
+test.describe.configure({ mode: "serial", retries: 0 });
 
 test.beforeEach(async ({ page }) => {
   await loginAndWait(page, E2E_ADMIN.username, E2E_ADMIN.password);
@@ -128,6 +129,22 @@ test("xóa: bị chặn khi còn con; xóa được người không có con", as
   await expect(page).toHaveURL(/\/members$/);
   await page.getByLabel("Tìm thành viên").fill("vu van tam");
   await expect(page.getByText("Không tìm thấy thành viên nào.")).toBeVisible();
+});
+
+test("Enter trong ô chọn bố không submit form (không mất quan hệ bố)", async ({ page }) => {
+  await openMember(page, "VŨ VĂN CHÁU");
+  await page.getByRole("link", { name: "Sửa thông tin" }).click();
+  await expect(page).toHaveURL(/\/edit$/);
+  const editUrl = page.url();
+  await page.getByRole("button", { name: "Bỏ chọn bố" }).click();
+  await page.getByRole("combobox", { name: "Bố" }).fill("vu van");
+  await page.getByRole("combobox", { name: "Bố" }).press("Enter");
+  await page.waitForTimeout(1000);
+  expect(page.url()).toBe(editUrl);
+  await expect(page.getByRole("button", { name: "Lưu thành viên" })).toBeVisible();
+
+  await openMember(page, "VŨ VĂN CHÁU");
+  await expect(page.getByRole("link", { name: /VŨ VĂN CON/ })).toBeVisible(); // Bố vẫn còn
 });
 
 test("form chặn chọn con cháu của mình làm bố", async ({ page }) => {
