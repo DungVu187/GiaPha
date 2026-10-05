@@ -734,6 +734,70 @@ describe('addRelative', () => {
   });
 });
 
+describe('đời nhập tay: chỉ admin', () => {
+  it('member liên kết thêm BỐ mới (gửi đời 150) → bỏ qua, bố = đời người đó − 1, con cháu không dịch', async () => {
+    const { me, wife, child } = await family();
+    const { id } = await addRelative(db, linked(me.id), wife.id, 'FATHER', {
+      member: input({ generation: 150 }),
+    });
+    expect(await gen(id)).toBe(2);
+    expect(await gen(wife.id)).toBe(3);
+    expect(await gen(child.id)).toBe(4);
+  });
+  it('member liên kết thêm VỢ mới cho người đời tay (gửi đời 150) → vợ lấy đời của người đó', async () => {
+    const { grandpa, father } = await family();
+    const { id } = await addRelative(
+      db,
+      linked(father.id),
+      grandpa.id,
+      'SPOUSE',
+      { member: input({ gender: 'FEMALE', generation: 150 }) },
+    );
+    expect(await gen(id)).toBe(1);
+  });
+  it('admin thêm BỐ mới với đời 10 → theo input, người con thành đời 11', async () => {
+    const { wife, child } = await family();
+    const { id } = await addRelative(db, ADMIN, wife.id, 'FATHER', {
+      member: input({ generation: 10 }),
+    });
+    expect(await gen(id)).toBe(10);
+    expect(await gen(wife.id)).toBe(11);
+    expect(await gen(child.id)).toBe(4);
+  });
+  it('member liên kết sửa người đời tay, gửi đời khác → giữ đời đang lưu, vẫn lưu các trường khác', async () => {
+    const { grandpa, father, me } = await family();
+    await updateMember(
+      db,
+      linked(father.id),
+      grandpa.id,
+      keep(grandpa, { generation: 5, note: 'đã sửa' }),
+    );
+    expect(await get(grandpa.id)).toMatchObject({
+      generation: 1,
+      note: 'đã sửa',
+    });
+    expect(await gen(father.id)).toBe(2);
+    expect(await gen(me.id)).toBe(3);
+  });
+  it('member liên kết sửa người đời tay, gửi đời null → không lỗi, giữ đời', async () => {
+    const { grandpa, father } = await family();
+    await updateMember(
+      db,
+      linked(father.id),
+      grandpa.id,
+      keep(grandpa, { generation: null }),
+    );
+    expect(await gen(grandpa.id)).toBe(1);
+  });
+  it('admin sửa người đời tay sang đời 5 → theo input, con cháu dịch theo', async () => {
+    const { grandpa, father, me } = await family();
+    await updateMember(db, ADMIN, grandpa.id, keep(grandpa, { generation: 5 }));
+    expect(await gen(grandpa.id)).toBe(5);
+    expect(await gen(father.id)).toBe(6);
+    expect(await gen(me.id)).toBe(7);
+  });
+});
+
 describe('removeSpouse', () => {
   it('admin gỡ → Marriage mất, cả hai còn', async () => {
     const { me, wife } = await family();

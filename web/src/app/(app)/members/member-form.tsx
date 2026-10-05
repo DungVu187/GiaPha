@@ -148,14 +148,15 @@ export function MemberForm({
   memberId,
   initial,
   generationLockedBySpouse = null,
-  canChangeParents,
+  isAdmin,
 }: {
   mode: "create" | "edit";
   memberId?: number;
   initial: MemberFormState;
   generationLockedBySpouse?: { generation: number } | null;
-  // R12: chỉ admin đổi bố/mẹ (API trả 403 nếu người khác gửi bố/mẹ khác giá trị đang lưu).
-  canChangeParents: boolean;
+  // R12: chỉ admin đổi bố/mẹ (API trả 403 nếu người khác gửi bố/mẹ khác giá trị đang lưu)
+  // và nhập đời bằng tay (API bỏ qua đời người khác gửi).
+  isAdmin: boolean;
 }) {
   const router = useRouter();
   const [s, setS] = useState(initial);
@@ -170,6 +171,7 @@ export function MemberForm({
   const parentGeneration = parentGenerationPreview(s);
   const spouseGeneration = parentGeneration === null ? generationLockedBySpouse?.generation ?? null : null;
   const generationLocked = parentGeneration !== null || spouseGeneration !== null;
+  const generationReadOnly = generationLocked || !isAdmin;
   const normalized = normalizeFullName(s.fullName);
   const backHref = mode === "edit" ? `/members/${memberId}` : "/members";
 
@@ -295,15 +297,19 @@ export function MemberForm({
             onChange={(g) => set("gender", s.gender === g ? null : g)}
             error={errors.gender}
           />
-          {generationLocked ? (
+          {generationReadOnly ? (
             <div className="flex flex-col gap-2">
               <span className="font-medium">Đời *</span>
               <p className="flex min-h-12 flex-wrap items-center gap-3 rounded-md bg-muted px-4">
                 <span className="rounded-sm bg-primary-soft px-2 py-0.5 text-sm font-medium text-accent-text">
-                  Đời {parentGeneration ?? spouseGeneration}
+                  Đời {parentGeneration ?? spouseGeneration ?? s.generation}
                 </span>
                 <span className="text-muted-foreground">
-                  {parentGeneration !== null ? "Tự tính từ bố/mẹ" : "Theo vợ/chồng"}
+                  {parentGeneration !== null
+                    ? "Tự tính từ bố/mẹ"
+                    : spouseGeneration !== null
+                      ? "Theo vợ/chồng"
+                      : "Chỉ quản trị viên sửa được đời"}
                 </span>
               </p>
               <FieldError id="generation-error" error={errors.generation} />
@@ -494,7 +500,7 @@ export function MemberForm({
           excludeId={memberId}
           value={s.father}
           onChange={(v) => set("father", v)}
-          readOnly={!canChangeParents}
+          readOnly={!isAdmin}
           error={errors.fatherId}
         />
         <MemberPicker
@@ -504,11 +510,11 @@ export function MemberForm({
           excludeId={memberId}
           value={s.mother}
           onChange={(v) => set("mother", v)}
-          readOnly={!canChangeParents}
+          readOnly={!isAdmin}
           error={errors.motherId}
         />
         <p className="text-sm text-muted-foreground">
-          {canChangeParents
+          {isAdmin
             ? "Chỉ hiện nam cho ô Bố, nữ cho ô Mẹ. Thêm vợ/chồng, con hoặc tạo người mới ở trang chi tiết."
             : "Chỉ quản trị viên được đổi bố/mẹ. Thêm vợ/chồng, con hoặc tạo người mới ở trang chi tiết."}
         </p>

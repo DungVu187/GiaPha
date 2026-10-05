@@ -238,7 +238,10 @@ export async function updateMember(
         motherId: input.motherId,
       },
     });
-    const generation = (await derivedGeneration(tx, id)) ?? input.generation;
+    // Chỉ admin nhập đời bằng tay; người khác gửi gì cũng giữ đời đang lưu.
+    const generation =
+      (await derivedGeneration(tx, id)) ??
+      (actor.role === 'ADMIN' ? input.generation : current.generation);
     if (generation === null)
       throw invalid({ generation: 'Vui lòng nhập đời.' });
     await setGeneration(tx, id, generation);
@@ -307,8 +310,12 @@ export async function addRelative(
   return write(db, async (tx) => {
     const person = await requireExists(tx, id);
     await requireCanEdit(tx, actor, id);
-    if (actor.role !== 'ADMIN')
+    if (actor.role !== 'ADMIN') {
       await checkRelativeEscalation(tx, person, relation, target);
+      // Chỉ admin nhập đời bằng tay: người mới lấy đời suy ra / mặc định theo quan hệ.
+      if ('member' in target)
+        target = { member: { ...target.member, generation: null } };
+    }
 
     if (relation === 'FATHER' || relation === 'MOTHER') {
       const isFather = relation === 'FATHER';

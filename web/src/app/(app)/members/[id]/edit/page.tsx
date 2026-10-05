@@ -23,7 +23,7 @@ export default async function EditMemberPage({ params }: { params: Promise<{ id:
         memberId={d.id}
         initial={memberFormFromDetail(d)}
         generationLockedBySpouse={d.generationLocked && !d.father && !d.mother ? { generation: d.generation } : null}
-        canChangeParents={user.role === "ADMIN"}
+        isAdmin={user.role === "ADMIN"}
       />
     </div>
   );

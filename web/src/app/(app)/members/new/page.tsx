@@ -13,7 +13,7 @@ export default async function NewMemberPage() {
         <h1 className="font-heading text-3xl leading-10 font-semibold">Thêm thành viên</h1>
         <p className="text-lg text-muted-foreground">Trường có dấu * là bắt buộc. Họ tên tự chuyển IN HOA khi lưu.</p>
       </div>
-      <MemberForm mode="create" initial={emptyMemberForm()} canChangeParents />
+      <MemberForm mode="create" initial={emptyMemberForm()} isAdmin />
     </div>
   );
 }
