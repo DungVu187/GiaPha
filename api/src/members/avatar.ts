@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { log } from '../lib/logger.js';
 
 export const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 const PUBLIC_PREFIX = '/uploads/avatars/';
@@ -42,6 +43,8 @@ export async function saveAvatarFile(
 }
 
 // Chỉ xóa file nằm trực tiếp trong thư mục avatars; không tồn tại → bỏ qua.
+// Không bao giờ ném: gọi sau khi DB đã ghi (hoặc khi dọn dẹp trong catch), lỗi xóa file
+// chỉ để lại file rác — log rồi bỏ qua, không biến thao tác đã thành công thành 500.
 export async function removeAvatarFile(
   publicPath: string | null,
 ): Promise<void> {
@@ -51,6 +54,8 @@ export async function removeAvatarFile(
   try {
     await unlink(path.join(uploadsDir(), 'avatars', name));
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code !== 'ENOENT')
+      log('error', 'avatar_remove_failed', { path: publicPath, code });
   }
 }

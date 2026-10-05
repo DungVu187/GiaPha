@@ -143,12 +143,14 @@ export class MembersController {
   }
 
   // multer giữ file trong bộ nhớ (không ghi đĩa); service kiểm quyền rồi mới lưu.
+  // fields: 0, parts: 1 — chỉ nhận đúng một phần là file; field text (busboy mặc định không giới hạn,
+  // mỗi field tới 1 MB, giữ trong RAM trước khi kiểm quyền) → 400.
   @Post(':id/avatar')
   @HttpCode(200)
   @UseFilters(AvatarUploadErrorFilter)
   @UseInterceptors(
     FileInterceptor('file', {
-      limits: { fileSize: MAX_AVATAR_BYTES, files: 1 },
+      limits: { fileSize: MAX_AVATAR_BYTES, files: 1, fields: 0, parts: 1 },
     }),
   )
   uploadAvatar(

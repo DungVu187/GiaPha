@@ -2,7 +2,17 @@ import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type MockInstance,
+  vi,
+} from 'vitest';
 import { createTestApp } from '../../test/helpers/app.js';
 import { createMember, loginAs } from '../../test/helpers/factories.js';
 import { testDb as db } from '../../test/helpers/test-db.js';
@@ -195,6 +205,27 @@ describe('ảnh đại diện', () => {
       expect(await avatarFiles()).toEqual([]);
     });
 
+    it('multipart kèm field text (trước hoặc sau file) → 400 tiếng Việt, không ghi file', async () => {
+      const f = await family();
+      const admin = await loginAs(db, { role: 'ADMIN' });
+      const fieldFirst = await http()
+        .post(`/api/members/${f.me.id}/avatar`)
+        .set('Cookie', admin.cookie)
+        .field('note', 'x'.repeat(1000))
+        .attach('file', PNG, 'a.png');
+      const fieldAfter = await http()
+        .post(`/api/members/${f.me.id}/avatar`)
+        .set('Cookie', admin.cookie)
+        .attach('file', PNG, 'a.png')
+        .field('note', 'x');
+      for (const res of [fieldFirst, fieldAfter]) {
+        expect(res.status).toBe(400);
+        expect(res.body).toEqual(NO_FILE);
+      }
+      expect(await avatarFiles()).toEqual([]);
+      expect(await avatarOf(f.me.id)).toBeNull();
+    });
+
     it('GIF / SVG đổi tên .png → 400 errors.file, không ghi file', async () => {
       const f = await family();
       const admin = await loginAs(db, { role: 'ADMIN' });
@@ -249,19 +280,25 @@ describe('ảnh đại diện', () => {
       const admin = { id: 1, role: 'ADMIN' as const, memberId: null };
       const old = await setAvatar(db, admin, f.me.id, PNG);
       // Trigger thật trên Postgres làm UPDATE avatarPath thất bại (không mock DB).
-      await db.$executeRawUnsafe(
-        `CREATE FUNCTION avatar_fail() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'avatar_fail'; END $$`,
-      );
-      await db.$executeRawUnsafe(
-        `CREATE TRIGGER avatar_fail BEFORE UPDATE OF "avatarPath" ON "Member" FOR EACH ROW EXECUTE FUNCTION avatar_fail()`,
-      );
+      // Tạo trong try + IF EXISTS: lần chạy trước bị ngắt giữa chừng cũng không làm lần sau lỗi "already exists".
       try {
+        await db.$executeRawUnsafe(
+          `CREATE OR REPLACE FUNCTION avatar_fail() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'avatar_fail'; END $$`,
+        );
+        await db.$executeRawUnsafe(
+          `DROP TRIGGER IF EXISTS avatar_fail ON "Member"`,
+        );
+        await db.$executeRawUnsafe(
+          `CREATE TRIGGER avatar_fail BEFORE UPDATE OF "avatarPath" ON "Member" FOR EACH ROW EXECUTE FUNCTION avatar_fail()`,
+        );
         await expect(setAvatar(db, admin, f.me.id, JPG)).rejects.toThrow(
           /avatar_fail/,
         );
       } finally {
-        await db.$executeRawUnsafe(`DROP TRIGGER avatar_fail ON "Member"`);
-        await db.$executeRawUnsafe(`DROP FUNCTION avatar_fail()`);
+        await db.$executeRawUnsafe(
+          `DROP TRIGGER IF EXISTS avatar_fail ON "Member"`,
+        );
+        await db.$executeRawUnsafe(`DROP FUNCTION IF EXISTS avatar_fail()`);
       }
       expect(await avatarFiles()).toEqual([path.basename(old.avatarPath)]);
       expect(await avatarOf(f.me.id)).toBe(old.avatarPath);
@@ -357,6 +394,73 @@ describe('ảnh đại diện', () => {
       .set('Cookie', admin.cookie);
     expect(res.status).toBe(409);
     expect(await exists(diskPath(p))).toBe(true);
+  });
+
+  describe('xóa file ảnh cũ thất bại sau khi DB đã ghi → vẫn thành công, chỉ log', () => {
+    let errors: string[] = [];
+    let spy: MockInstance;
+    beforeEach(() => {
+      errors = [];
+      spy = vi
+        .spyOn(console, 'error')
+        .mockImplementation((line: string) => void errors.push(line));
+    });
+    afterEach(() => spy.mockRestore());
+
+    // Thay file ảnh bằng thư mục cùng tên → unlink lỗi (EISDIR/EPERM), không phải ENOENT.
+    async function avatarAsDirectory(id: number): Promise<string> {
+      const admin = await loginAs(db, { role: 'ADMIN' });
+      const p = (await upload(id, admin.cookie)).body.avatarPath as string;
+      await rm(diskPath(p));
+      await mkdir(diskPath(p));
+      return p;
+    }
+    const loggedRemoveFailure = () =>
+      errors.some((l) => JSON.parse(l).event === 'avatar_remove_failed');
+
+    it('removeAvatarFile: lỗi khác ENOENT → không ném, log JSON', async () => {
+      await mkdir(path.join(avatarsDir(), '1-0000000000000000.png'), {
+        recursive: true,
+      });
+      await expect(
+        removeAvatarFile('/uploads/avatars/1-0000000000000000.png'),
+      ).resolves.toBeUndefined();
+      expect(loggedRemoveFailure()).toBe(true);
+    });
+
+    it('upload ảnh mới → 200, DB trỏ ảnh mới', async () => {
+      const f = await family();
+      await avatarAsDirectory(f.me.id);
+      const admin = await loginAs(db, { role: 'ADMIN' });
+      const res = await upload(f.me.id, admin.cookie);
+      expect(res.status).toBe(200);
+      expect(await avatarOf(f.me.id)).toBe(res.body.avatarPath);
+      expect(loggedRemoveFailure()).toBe(true);
+    });
+
+    it('DELETE avatar → 204, DB null', async () => {
+      const f = await family();
+      await avatarAsDirectory(f.me.id);
+      const admin = await loginAs(db, { role: 'ADMIN' });
+      const res = await http()
+        .delete(`/api/members/${f.me.id}/avatar`)
+        .set('Cookie', admin.cookie);
+      expect(res.status).toBe(204);
+      expect(await avatarOf(f.me.id)).toBeNull();
+      expect(loggedRemoveFailure()).toBe(true);
+    });
+
+    it('DELETE thành viên → 204, đã xóa khỏi DB', async () => {
+      const f = await family();
+      await avatarAsDirectory(f.me.id);
+      const admin = await loginAs(db, { role: 'ADMIN' });
+      const res = await http()
+        .delete(`/api/members/${f.me.id}`)
+        .set('Cookie', admin.cookie);
+      expect(res.status).toBe(204);
+      expect(await db.member.findUnique({ where: { id: f.me.id } })).toBeNull();
+      expect(loggedRemoveFailure()).toBe(true);
+    });
   });
 
   describe('removeAvatarFile', () => {
