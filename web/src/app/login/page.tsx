@@ -1,10 +1,11 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BrandSeal } from "@/components/brand-seal";
 import { Card } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/current-user";
 import { LoginForm } from "./login-form";
 
-// "Quên mật khẩu?" (GĐ6, chỉ khi có SMTP) và link "Đăng ký" (GĐ3) chưa hiện ở GĐ1.
+// "Quên mật khẩu?" (GĐ6, chỉ khi có SMTP) chưa hiện.
 export default async function LoginPage() {
   if (await getCurrentUser()) redirect("/");
   return (
@@ -21,6 +22,14 @@ export default async function LoginPage() {
           <div aria-hidden="true" className="hidden h-0.5 w-16 bg-accent sm:block" />
         </div>
         <LoginForm />
+        <div className="flex flex-col items-center gap-4 border-t border-border pt-5 text-muted-foreground">
+          <p>
+            Chưa có tài khoản?{" "}
+            <Link href="/register" className="font-medium text-primary underline underline-offset-4">
+              Đăng ký
+            </Link>
+          </p>
+        </div>
       </Card>
     </main>
   );
