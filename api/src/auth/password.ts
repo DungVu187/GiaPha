@@ -2,6 +2,8 @@ import { hash, verify } from '@node-rs/argon2';
 import { log } from '../lib/logger.js';
 
 export const MIN_PASSWORD_LENGTH = 8;
+// Chặn chuỗi khổng lồ trước khi băm argon2 (tốn CPU).
+export const MAX_PASSWORD_LENGTH = 256;
 
 // Chữ có dấu có thể đến dạng dựng sẵn (NFC) hoặc tổ hợp (NFD) tùy bộ gõ/thiết bị → luôn băm dạng NFC.
 const normalize = (plain: string) => plain.normalize('NFC');

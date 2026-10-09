@@ -22,6 +22,7 @@ import {
   SESSION_COOKIE,
   type SessionUser,
 } from './session.js';
+import { MAX_PASSWORD_LENGTH } from './password.js';
 import { normalizeUsername } from './username.js';
 
 const cookieOptions: CookieOptions = {
@@ -33,7 +34,6 @@ const cookieOptions: CookieOptions = {
 
 // Giới hạn độ dài để không phải băm argon2 chuỗi khổng lồ.
 const MAX_USERNAME_LENGTH = 64;
-const MAX_PASSWORD_LENGTH = 256;
 
 function parseCredentials(
   body: unknown,
