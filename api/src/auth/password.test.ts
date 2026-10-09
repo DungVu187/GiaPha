@@ -39,4 +39,16 @@ describe('password', () => {
     const hash = await hashPassword('mậtkhẩuđẹp');
     expect(await verifyPassword(hash, 'mậtkhẩuđẹp')).toBe(true);
   });
+  it('chuẩn hóa NFC: đặt bằng dạng tổ hợp (NFD), đăng nhập bằng dạng dựng sẵn (NFC) → khớp', async () => {
+    const nfc = 'Họ Vũ Thế 2026';
+    const nfd = nfc.normalize('NFD');
+    expect(nfd).not.toBe(nfc);
+    expect(await verifyPassword(await hashPassword(nfd), nfc)).toBe(true);
+    expect(await verifyPassword(await hashPassword(nfc), nfd)).toBe(true);
+  });
+  it('chuẩn hóa NFC không làm khớp chữ khác dấu', async () => {
+    const hash = await hashPassword('Thế');
+    expect(await verifyPassword(hash, 'Thề')).toBe(false);
+    expect(await verifyPassword(hash, 'The')).toBe(false);
+  });
 });
