@@ -36,4 +36,17 @@ describe('seedAdmin', () => {
     await expect(seedAdmin(db, 'admin', '1234567')).rejects.toThrow(/PASSWORD/);
     expect(await db.user.count()).toBe(0);
   });
+
+  it('username đã là tài khoản thường (MEMBER) → throw, không đổi tài khoản đó', async () => {
+    const member = await db.user.create({
+      data: { username: 'admin', passwordHash: 'x', role: 'MEMBER' },
+    });
+    await expect(seedAdmin(db, 'Admin', 'MatKhau@123')).rejects.toThrow(
+      /tài khoản thường/,
+    );
+    const after = await db.user.findUniqueOrThrow({ where: { id: member.id } });
+    expect(after.role).toBe('MEMBER');
+    expect(after.passwordHash).toBe('x');
+    expect(await db.user.count()).toBe(1);
+  });
 });

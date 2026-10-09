@@ -17,9 +17,18 @@ export async function seedAdmin(
   }
   const existing = await db.user.findUnique({
     where: { username },
-    select: { id: true, username: true },
+    select: { id: true, username: true, role: true },
   });
-  if (existing) return { created: false, user: existing };
+  if (existing) {
+    if (existing.role !== 'ADMIN')
+      throw new Error(
+        `ADMIN_USERNAME "${username}" đã được một tài khoản thường sử dụng — đổi ADMIN_USERNAME hoặc nâng quyền tài khoản đó.`,
+      );
+    return {
+      created: false,
+      user: { id: existing.id, username: existing.username },
+    };
+  }
   const user = await db.user.create({
     data: {
       username,
