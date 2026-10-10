@@ -14,7 +14,8 @@ Website gia phả cho dòng họ Vũ: quản lý thành viên theo đời, quan 
 - Ảnh đại diện (JPEG/PNG/WebP, tối đa 5 MB, lưu trên ổ đĩa).
 - Tìm thành viên theo tên, gõ không dấu được.
 
-Đang làm: đăng ký + "Đây là tôi", cây gia phả, danh sách theo đời và lịch giỗ, trang quản trị, triển khai VPS.
+- Tự đăng ký tài khoản; nếu gia phả đã có người trùng họ tên + đời chưa có tài khoản thì chọn "Đây là tôi" để nhận hồ sơ, hoặc tạo hồ sơ mới.
+Đang làm: cây gia phả, danh sách theo đời và lịch giỗ, trang quản trị, triển khai VPS.
 
 ## Công nghệ
 

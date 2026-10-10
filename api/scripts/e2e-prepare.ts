@@ -48,6 +48,49 @@ async function main() {
     const bo = await make('Vũ Văn Bố', 2, ong.id);
     const toi = await make('Vũ Văn Tôi', 3, bo.id);
     await make('Vũ Văn Bác', 2, ong.id);
+
+    // Dữ liệu cho e2e đăng ký: hai hồ sơ cùng tên + đời (có bố mẹ / chỉ có bố).
+    const thinh = await make('Vũ Đức Thịnh', 4);
+    const lanName = normalizeFullName('Trần Thị Lan');
+    const lan = await db.member.create({
+      data: {
+        fullName: lanName,
+        searchName: toSearchName(lanName),
+        generation: 4,
+        gender: 'FEMALE',
+      },
+    });
+    await db.marriage.create({
+      data: {
+        person1Id: Math.min(thinh.id, lan.id),
+        person2Id: Math.max(thinh.id, lan.id),
+      },
+    });
+    const dungName = normalizeFullName('Vũ Đức Dũng');
+    await db.member.create({
+      data: {
+        fullName: dungName,
+        searchName: toSearchName(dungName),
+        generation: 5,
+        gender: 'MALE',
+        fatherId: thinh.id,
+        motherId: lan.id,
+        birthYear: 2003,
+        birthMonth: 7,
+        birthDay: 18,
+      },
+    });
+    const binh = await make('Vũ Văn Bình', 4);
+    await db.member.create({
+      data: {
+        fullName: dungName,
+        searchName: toSearchName(dungName),
+        generation: 5,
+        gender: 'MALE',
+        fatherId: binh.id,
+        birthYear: 1998,
+      },
+    });
     await db.user.create({
       data: {
         username: E2E_MEMBER_USERNAME,

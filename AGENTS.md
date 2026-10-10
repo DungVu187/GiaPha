@@ -19,14 +19,14 @@ Muốn đổi một quyết định đã chốt (bảng D1–D16 trong spec) →
 
 ## Trạng thái hiện tại
 
-- GĐ1, GĐ2 xong. Bước tiếp theo: plan GĐ3.
+- GĐ1–GĐ3 xong. Bước tiếp theo: plan GĐ4.
 - Cập nhật mục này khi xong mỗi giai đoạn.
 
 | GĐ | Nội dung | Trạng thái |
 |---|---|---|
 | 1 | Khung NestJS (`api/`) + Next.js (`web/`), Postgres, Prisma, seed admin, đăng nhập session, `/api/health`, CI | Xong |
 | 2 | CRUD thành viên, quan hệ, đời, ngày giỗ + lịch âm, phân quyền, ảnh | Xong |
-| 3 | Đăng ký + phát hiện trùng + "Đây là tôi" | Chưa làm |
+| 3 | Đăng ký + phát hiện trùng + "Đây là tôi" | Xong |
 | 4 | Cây gia phả (React Flow) | Chưa làm |
 | 5 | Danh sách theo đời, tìm kiếm, lịch giỗ, dashboard | Chưa làm |
 | 6 | Tài khoản, quên mật khẩu, trang quản trị | Chưa làm |
