@@ -49,6 +49,44 @@ async function main() {
     const toi = await make('Vũ Văn Tôi', 3, bo.id);
     await make('Vũ Văn Bác', 2, ong.id);
 
+    // Dữ liệu cho e2e cây: con gái có chồng ngoài họ và cháu ngoại (không vẽ trên cây).
+    const gaiName = normalizeFullName('Vũ Thị Gái');
+    const gai = await db.member.create({
+      data: {
+        fullName: gaiName,
+        searchName: toSearchName(gaiName),
+        generation: 2,
+        gender: 'FEMALE',
+        fatherId: ong.id,
+      },
+    });
+    const reName = normalizeFullName('Lê Văn Rể');
+    const re = await db.member.create({
+      data: {
+        fullName: reName,
+        searchName: toSearchName(reName),
+        generation: 2,
+        gender: 'MALE',
+      },
+    });
+    await db.marriage.create({
+      data: {
+        person1Id: Math.min(gai.id, re.id),
+        person2Id: Math.max(gai.id, re.id),
+      },
+    });
+    const ngoaiName = normalizeFullName('Lê Văn Ngoại');
+    await db.member.create({
+      data: {
+        fullName: ngoaiName,
+        searchName: toSearchName(ngoaiName),
+        generation: 3,
+        gender: 'MALE',
+        fatherId: re.id,
+        motherId: gai.id,
+      },
+    });
+
     // Dữ liệu cho e2e đăng ký: hai hồ sơ cùng tên + đời (có bố mẹ / chỉ có bố).
     const thinh = await make('Vũ Đức Thịnh', 4);
     const lanName = normalizeFullName('Trần Thị Lan');

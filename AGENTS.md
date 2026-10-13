@@ -19,7 +19,7 @@ Muốn đổi một quyết định đã chốt (bảng D1–D16 trong spec) →
 
 ## Trạng thái hiện tại
 
-- GĐ1–GĐ3 xong. Bước tiếp theo: plan GĐ4.
+- GĐ1–GĐ4 xong. Bước tiếp theo: plan GĐ5.
 - Cập nhật mục này khi xong mỗi giai đoạn.
 
 | GĐ | Nội dung | Trạng thái |
@@ -27,7 +27,7 @@ Muốn đổi một quyết định đã chốt (bảng D1–D16 trong spec) →
 | 1 | Khung NestJS (`api/`) + Next.js (`web/`), Postgres, Prisma, seed admin, đăng nhập session, `/api/health`, CI | Xong |
 | 2 | CRUD thành viên, quan hệ, đời, ngày giỗ + lịch âm, phân quyền, ảnh | Xong |
 | 3 | Đăng ký + phát hiện trùng + "Đây là tôi" | Xong |
-| 4 | Cây gia phả (React Flow) | Chưa làm |
+| 4 | Cây gia phả (React Flow) | Xong |
 | 5 | Danh sách theo đời, tìm kiếm, lịch giỗ, dashboard | Chưa làm |
 | 6 | Tài khoản, quên mật khẩu, trang quản trị | Chưa làm |
 | 7 | Deploy VPS (Nginx, PM2, SSL, backup), CD, monitor, UptimeRobot | Chưa làm |
@@ -41,7 +41,7 @@ Muốn đổi một quyết định đã chốt (bảng D1–D16 trong spec) →
 - Tailwind CSS + shadcn/ui (web).
 - Prisma + PostgreSQL **cài native** (không Docker). Dev: Postgres 18 trên Windows.
 - Auth: session lưu DB + cookie httpOnly do API đặt. **Không dùng JWT.**
-- Cây: React Flow + dagre.
+- Cây: React Flow (`@xyflow/react`); xếp vị trí tự viết theo đời (`web/src/lib/tree-layout.ts`), không dùng dagre.
 - Ảnh: lưu ổ đĩa (`uploads/`), Nginx phục vụ. Không dùng Cloudinary/S3.
 - Test: Vitest (unit + integration với Postgres thật), Playwright (e2e).
 - Deploy VPS: **Nginx + PM2** (không Docker, để nhẹ VPS; Docker xem xét sau). CI: GitHub Actions.

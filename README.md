@@ -14,15 +14,16 @@ Website gia phả cho dòng họ Vũ: quản lý thành viên theo đời, quan 
 - Ảnh đại diện (JPEG/PNG/WebP, tối đa 5 MB, lưu trên ổ đĩa).
 - Tìm thành viên theo tên, gõ không dấu được.
 - Tự đăng ký tài khoản; nếu gia phả đã có người trùng họ tên + đời chưa có tài khoản thì chọn "Đây là tôi" để nhận hồ sơ, hoặc tạo hồ sơ mới.
+- Cây gia phả tự dựng theo đời: phóng to/thu nhỏ, kéo, thu gọn/mở nhánh, tìm người trên cây, bấm thẻ xem chi tiết; chỉ vẽ người trong dòng (theo dòng cha) và vợ/chồng.
 
-Đang làm: cây gia phả, danh sách theo đời và lịch giỗ, trang quản trị, triển khai VPS.
+Đang làm: danh sách theo đời và lịch giỗ, trang quản trị, triển khai VPS.
 
 ## Công nghệ
 
 | Phần | Công nghệ |
 |---|---|
 | `api/` | NestJS 12 (TypeScript, ESM), Prisma 7, PostgreSQL 18 |
-| `web/` | Next.js 16 (App Router), React 19, Tailwind CSS 4, shadcn/ui |
+| `web/` | Next.js 16 (App Router), React 19, Tailwind CSS 4, shadcn/ui, React Flow |
 | Test | Vitest (unit + integration với Postgres thật), Playwright (e2e) |
 | CI | GitHub Actions |
 
