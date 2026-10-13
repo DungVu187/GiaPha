@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 const ITEMS = [
   { href: "/", label: "Trang chủ", match: (p: string) => p === "/" },
+  { href: "/tree", label: "Cây gia phả", match: (p: string) => p.startsWith("/tree") },
   { href: "/members", label: "Thành viên", match: (p: string) => p.startsWith("/members") },
 ];
 

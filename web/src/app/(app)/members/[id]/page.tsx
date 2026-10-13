@@ -94,16 +94,17 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
                   Con của {parent.label} {parent.p.fullName}
                 </p>
               )}
-              {(m.permissions.canEdit || m.permissions.canDelete) && (
-                <div className="flex flex-wrap gap-3 pt-2">
-                  {m.permissions.canEdit && (
-                    <Link href={`/members/${m.id}/edit`} className={buttonVariants({ variant: "outline" })}>
-                      Sửa thông tin
-                    </Link>
-                  )}
-                  {m.permissions.canDelete && <DeleteButton id={m.id} fullName={m.fullName} />}
-                </div>
-              )}
+              <div className="flex flex-wrap gap-3 pt-2">
+                <Link href={`/tree?focus=${m.id}`} className={buttonVariants({ variant: "outline" })}>
+                  Xem trên cây
+                </Link>
+                {m.permissions.canEdit && (
+                  <Link href={`/members/${m.id}/edit`} className={buttonVariants({ variant: "outline" })}>
+                    Sửa thông tin
+                  </Link>
+                )}
+                {m.permissions.canDelete && <DeleteButton id={m.id} fullName={m.fullName} />}
+              </div>
             </div>
           </section>
 
