@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeFullName } from "./name";
+import { normalizeFullName, toSearchName } from "./name";
 
 describe("normalizeFullName", () => {
   it.each([
@@ -16,5 +16,13 @@ describe("normalizeFullName", () => {
 
   it("chuỗi tổ hợp NFD được đưa về NFC trước khi in hoa", () => {
     expect(normalizeFullName("vũ".normalize("NFD"))).toBe("VŨ");
+  });
+});
+
+describe("toSearchName", () => {
+  it("bỏ dấu, đ→d, chữ thường, gộp khoảng trắng — giống api", () => {
+    expect(toSearchName("  Vũ   ĐỨC Dũng ")).toBe("vu duc dung");
+    expect(toSearchName("Đặng Thị Ánh")).toBe("dang thi anh");
+    expect(toSearchName("vũ".normalize("NFD"))).toBe("vu");
   });
 });
