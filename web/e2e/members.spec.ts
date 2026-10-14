@@ -108,6 +108,15 @@ test("tải ảnh đại diện", async ({ page }) => {
   const src = await img.getAttribute("src");
   expect(src).toMatch(/^\/uploads\/avatars\//);
   expect((await page.request.get(src!)).status()).toBe(200);
+  await expect(img).toHaveAttribute("loading", "lazy");
+
+  // Trên cây: tên đã nằm trong thẻ nên ảnh để alt rỗng (không đọc tên 2 lần).
+  const id = await memberIdByName(page, "VŨ VĂN CỤ");
+  await page.goto(`/tree?focus=${id}`);
+  const cardImg = page.locator(`[data-member-id="${id}"][data-kind="lineage"] img`);
+  await expect(cardImg).toHaveAttribute("src", src!);
+  await expect(cardImg).toHaveAttribute("alt", "");
+  await expect(cardImg).toHaveAttribute("loading", "lazy");
 });
 
 test("xóa: bị chặn khi còn con; xóa được người không có con", async ({ page }) => {

@@ -45,6 +45,11 @@ test("tìm không dấu → bấm kết quả → tô sáng; không tìm thấy 
   const toi = await memberIdByName(page, "Vũ Văn Tôi");
   await expect(lineage(page, toi)).toHaveAttribute("data-highlight", "true");
   await expect(lineage(page, toi)).toBeInViewport();
+  // Chọn xong → thu danh sách (không che thẻ), giữ chữ trong ô; focus lại ô → mở lại.
+  await expect(page.getByTestId("tree-search-results")).toBeHidden();
+  await expect(search).toHaveValue("vu van toi");
+  await search.focus();
+  await expect(page.getByTestId("tree-search-results")).toBeVisible();
   await search.fill("le van ngoai");
   await expect(page.getByText("Không tìm thấy trên cây.")).toBeVisible();
 });
@@ -74,6 +79,23 @@ test("bấm thẻ → trang chi tiết; Xem trên cây → quay lại cây, tô 
   await expect(page).toHaveURL(new RegExp(`/tree\\?focus=${bo}$`));
   await expect(lineage(page, bo)).toHaveAttribute("data-highlight", "true");
   await expect(lineage(page, bo)).toBeInViewport();
+});
+
+test("kéo chuột bắt đầu trên thẻ → cây di chuyển, không mở trang chi tiết", async ({ page }) => {
+  await loginAndWait(page, E2E_ADMIN.username, E2E_ADMIN.password);
+  const bo = await memberIdByName(page, "Vũ Văn Bố");
+  await page.goto(`/tree?focus=${bo}`);
+  const card = lineage(page, bo);
+  await expect(card).toBeInViewport();
+  const before = (await card.boundingBox())!;
+  const x = before.x + before.width / 2;
+  const y = before.y + before.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + 200, y + 50, { steps: 10 });
+  await page.mouse.up();
+  await expect.poll(async () => (await card.boundingBox())!.x - before.x).toBeGreaterThan(150);
+  await expect(page).toHaveURL(new RegExp(`/tree\\?focus=${bo}$`));
 });
 
 test("thành viên liên kết: Về hồ sơ của tôi → tô sáng chính mình", async ({ page }) => {

@@ -31,13 +31,13 @@ function Card({ c, kind, highlight }: { c: TreeCard; kind: "lineage" | "spouse";
       data-highlight={highlight}
       style={{ width: CARD_W, minHeight: CARD_H - 24 }}
       className={cn(
-        "nodrag nopan flex flex-col items-center gap-1 rounded-md border border-t-4 border-border px-3 py-3 text-center text-xs shadow-sm transition-shadow hover:shadow-md focus-visible:outline-2 focus-visible:outline-ring",
+        "flex flex-col items-center gap-1 rounded-md border border-t-4 border-border px-3 py-3 text-center text-xs shadow-sm transition-shadow hover:shadow-md focus-visible:outline-2 focus-visible:outline-ring",
         kind === "lineage" ? "border-t-primary" : "border-t-accent",
         c.isDeceased ? "bg-muted" : "bg-card",
         highlight && "ring-4 ring-accent",
       )}
     >
-      <MemberAvatar fullName={c.fullName} avatarPath={c.avatarPath} size="sm" />
+      <MemberAvatar fullName={c.fullName} avatarPath={c.avatarPath} size="sm" alt="" />
       <span className="font-heading text-sm leading-tight font-semibold">{c.fullName}</span>
       <span className="flex flex-wrap items-center justify-center gap-1 text-accent-text">
         Đời {c.generation}

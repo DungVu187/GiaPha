@@ -44,6 +44,8 @@ function TreeCanvas({ data, myMemberId, focusId }: Props) {
     focusFamily !== null ? { nodes: [{ id: `f-${focusFamily}` }], maxZoom: 1 } : FIT_ALL,
   );
   const [query, setQuery] = useState("");
+  // Thu danh sách sau khi chọn để bảng tìm không che thẻ vừa căn giữa (điện thoại); sửa ô / focus → mở lại.
+  const [resultsOpen, setResultsOpen] = useState(true);
   const [legendOpen, setLegendOpen] = useState(false);
 
   const layout = useMemo(() => layoutTree(data, collapsed), [data, collapsed]);
@@ -139,12 +141,16 @@ function TreeCanvas({ data, myMemberId, focusId }: Props) {
           <Input
             id="tree-search"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setResultsOpen(true);
+            }}
+            onFocus={() => setResultsOpen(true)}
             placeholder="Nhập tên, gõ không dấu được"
             className="pl-9"
           />
         </div>
-        {query.trim() !== "" && (
+        {resultsOpen && query.trim() !== "" && (
           <>
             <p role="status" className="mt-2 text-sm text-muted-foreground">
               {hits.length > 0 ? `${hits.length} kết quả (tìm không dấu)` : "Không tìm thấy trên cây."}
@@ -155,7 +161,10 @@ function TreeCanvas({ data, myMemberId, focusId }: Props) {
                   <li key={h.memberId}>
                     <button
                       type="button"
-                      onClick={() => focusMember(h.memberId)}
+                      onClick={() => {
+                        setResultsOpen(false);
+                        focusMember(h.memberId);
+                      }}
                       aria-current={highlightId === h.memberId}
                       className="w-full rounded-md border border-transparent px-2 py-1.5 text-left hover:bg-muted aria-[current=true]:border-accent aria-[current=true]:bg-accent/15"
                     >
