@@ -109,4 +109,35 @@ describe('GET /api/tree', () => {
       expect(JSON.stringify(res.body)).not.toContain('LÊ VĂN NGOẠI');
     },
   );
+
+  it('bà mẹ không có Marriage → thẻ vợ trong khối ông, không là gốc', async () => {
+    const ong = await make(db, {
+      fullName: 'VŨ VĂN ÔNG',
+      generation: 1,
+      gender: 'MALE',
+    });
+    const ba = await make(db, {
+      fullName: 'NGUYỄN THỊ BÀ',
+      generation: 1,
+      gender: 'FEMALE',
+    });
+    const con = await make(db, {
+      fullName: 'VŨ VĂN CON',
+      generation: 2,
+      gender: 'MALE',
+      fatherId: ong.id,
+      motherId: ba.id,
+    });
+    const { cookie } = await loginAs(db, { role: 'MEMBER' });
+
+    const res = await http().get('/api/tree').set('Cookie', cookie);
+    expect(res.status).toBe(200);
+    expect(res.body.roots).toEqual([ong.id]);
+    const ids = res.body.families.map((f: { id: number }) => f.id);
+    expect(ids).toEqual([ong.id, con.id]);
+    expect(res.body.families[0]).toMatchObject({
+      spouses: [{ id: ba.id, fullName: 'NGUYỄN THỊ BÀ' }],
+      childIds: [con.id],
+    });
+  });
 });

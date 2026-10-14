@@ -82,6 +82,16 @@ export function buildTree(
     link(w.person1Id, w.person2Id);
     link(w.person2Id, w.person1Id);
   }
+  // Bố mẹ chung chưa có Marriage → coi là vợ chồng ngầm, xếp sau vợ/chồng có Marriage,
+  // theo id người con chung nhỏ nhất (duyệt con theo id tăng dần).
+  for (const c of [...members].sort((a, b) => a.id - b.id)) {
+    const { fatherId: f, motherId: mo } = c;
+    if (f === null || mo === null || f === mo) continue;
+    if (!byId.has(f) || !byId.has(mo)) continue;
+    if (spouseIds.get(f)?.includes(mo)) continue;
+    link(f, mo);
+    link(mo, f);
+  }
 
   const hasParent = (p: TreeMemberRow) =>
     p.fatherId !== null || p.motherId !== null;

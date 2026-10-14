@@ -153,6 +153,68 @@ describe('buildTree', () => {
     expect(ids(t)).toEqual([1, 2]);
   });
 
+  it('bố mẹ chung không có Marriage → coi là vợ chồng ngầm: bà là thẻ vợ trong khối ông, không là gốc', () => {
+    const t = buildTree(
+      [
+        m(1), // ÔNG
+        m(2, { gender: 'FEMALE' }), // BÀ: không bố mẹ, không Marriage
+        m(3, { generation: 2, fatherId: 1, motherId: 2 }), // CON
+      ],
+      [],
+    );
+    expect(ids(t)).toEqual([1, 3]);
+    expect(t.roots).toEqual([1]);
+    expect(fam(t, 1)?.spouses.map((s) => s.id)).toEqual([2]);
+    expect(fam(t, 2)).toBeUndefined();
+  });
+
+  it('con gái + rể không Marriage nhưng có con chung → rể là thẻ chồng, cháu ngoại không vẽ (D6)', () => {
+    const t = buildTree(
+      [
+        m(1),
+        m(2, { generation: 2, gender: 'FEMALE', fatherId: 1 }), // GÁI
+        m(3, { generation: 2 }), // RỂ: không bố mẹ, không Marriage
+        m(4, { generation: 3, fatherId: 3, motherId: 2 }), // NGOẠI
+      ],
+      [],
+    );
+    expect(ids(t)).toEqual([1, 2]);
+    expect(t.roots).toEqual([1]);
+    expect(fam(t, 2)?.spouses.map((s) => s.id)).toEqual([3]);
+    expect(fam(t, 2)?.childIds).toEqual([]);
+    expect(fam(t, 3)).toBeUndefined();
+    expect(JSON.stringify(t)).not.toContain('NGƯỜI 4');
+  });
+
+  it('bố mẹ chung đã có Marriage → không nhân đôi thẻ vợ', () => {
+    const t = buildTree(
+      [
+        m(1),
+        m(2, { gender: 'FEMALE' }),
+        m(3, { generation: 2, fatherId: 1, motherId: 2 }),
+        m(4, { generation: 2, fatherId: 1, motherId: 2 }),
+      ],
+      [wed(1, 2)],
+    );
+    expect(fam(t, 1)?.spouses.map((s) => s.id)).toEqual([2]);
+  });
+
+  it('vợ có Marriage xếp trước, vợ ngầm sau (theo id con chung nhỏ nhất, rồi id người)', () => {
+    const t = buildTree(
+      [
+        m(1),
+        m(5, { gender: 'FEMALE' }), // vợ ngầm, con chung id 9
+        m(6, { gender: 'FEMALE' }), // vợ ngầm, con chung id 8 → trước 5
+        m(7, { gender: 'FEMALE' }), // vợ có Marriage
+        m(8, { generation: 2, fatherId: 1, motherId: 6 }),
+        m(9, { generation: 2, fatherId: 1, motherId: 5 }),
+        m(10, { generation: 2, fatherId: 1, motherId: 5 }),
+      ],
+      [wed(1, 7)],
+    );
+    expect(fam(t, 1)?.spouses.map((s) => s.id)).toEqual([7, 6, 5]);
+  });
+
   it('người vừa đăng ký chưa có bố → gốc riêng, giữ đời của mình', () => {
     const t = buildTree(
       [m(1), m(2, { generation: 2, fatherId: 1 }), m(9, { generation: 5 })],
