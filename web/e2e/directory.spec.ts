@@ -32,6 +32,32 @@ test("danh sách nhóm theo đời; tìm khớp tên bố; lọc đời; giữ b
   await expect(page.getByText("Không tìm thấy thành viên nào.")).toBeVisible();
 });
 
+test("Back từ trang chi tiết giữ bộ lọc; thẻ ĐÃ KHUẤT; điện thoại: nhãn dưới tên", async ({ page }) => {
+  await loginAndWait(page, E2E_VIEWER.username, E2E_VIEWER.password);
+  await page.goto("/members");
+  await page.getByLabel("Tìm theo tên, tên bố hoặc tên mẹ").fill("vu van bo");
+  await expect(page.getByRole("status")).toContainText("kết quả cho “vu van bo”");
+  await page.getByRole("link", { name: /^VŨ VĂN TÔI,/ }).click();
+  await expect(page).toHaveURL(/\/members\/\d+$/);
+  await page.goBack();
+  await expect(page.getByLabel("Tìm theo tên, tên bố hoặc tên mẹ")).toHaveValue("vu van bo");
+  await expect(page.getByRole("status")).toContainText("kết quả cho “vu van bo”");
+  await expect(page.getByRole("link", { name: /^VŨ VĂN BỐ,/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^VŨ VĂN TÔI, đời 3, con của VŨ VĂN BỐ/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^VŨ VĂN GIỖ GẦN,/ })).toHaveCount(0);
+
+  // Người đã khuất: nhãn trong tên truy cập và hiện "ĐÃ KHUẤT".
+  await page.getByLabel("Tìm theo tên, tên bố hoặc tên mẹ").fill("gio gan");
+  const row = page.getByRole("link", { name: /^VŨ VĂN GIỖ GẦN,.*đã khuất/ });
+  await expect(row).toBeVisible();
+  await expect(row.getByText("ĐÃ KHUẤT").locator("visible=true")).toBeVisible();
+  await page.setViewportSize({ width: 375, height: 812 });
+  const badge = row.getByText("ĐÃ KHUẤT").locator("visible=true");
+  const name = row.getByText("VŨ VĂN GIỖ GẦN", { exact: true }).locator("visible=true");
+  await expect(badge).toBeVisible();
+  expect((await badge.boundingBox())!.y).toBeGreaterThan((await name.boundingBox())!.y);
+});
+
 test("admin thấy nút Thêm thành viên; bấm dòng → trang chi tiết", async ({ page }) => {
   await loginAndWait(page, E2E_ADMIN.username, E2E_ADMIN.password);
   await page.goto("/members?q=vu%20van%20toi");

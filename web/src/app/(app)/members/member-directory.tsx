@@ -2,14 +2,14 @@
 
 import { ChevronRight, Search } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { DeceasedBadge } from "@/components/deceased-badge";
 import { Highlight } from "@/components/highlight";
 import { MemberAvatar } from "@/components/member-avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { directoryQuery, groupByGeneration } from "@/lib/directory";
+import { directoryQuery, groupByGeneration, parseDirectoryParams } from "@/lib/directory";
 import { formatPartialDate } from "@/lib/format";
 import type { SearchResult } from "@/lib/member-types";
 
@@ -27,13 +27,18 @@ type Props = {
 
 export function MemberDirectory({ generations, initialQuery, initialGeneration, initialRows }: Props) {
   const router = useRouter();
-  const [q, setQ] = useState(initialQuery);
-  const [generation, setGeneration] = useState(initialGeneration);
+  // Trạng thái đầu lấy từ URL hiện tại, không phải props server: Back từ trang chi tiết dùng lại payload RSC cũ
+  // (không tham số) trong khi URL còn bộ lọc đã replaceState.
+  const sp = useSearchParams();
+  const [url] = useState(() => parseDirectoryParams({ q: sp.get("q") ?? undefined, generation: sp.get("generation") ?? undefined }));
+  const [q, setQ] = useState(url.q);
+  const [generation, setGeneration] = useState(url.generation);
   const [rows, setRows] = useState(initialRows);
   // Bộ lọc ứng với `rows` đang hiện (để dòng tóm tắt và chữ tô khớp đúng kết quả, không nhảy theo từng phím gõ).
   const [shown, setShown] = useState({ q: initialQuery, generation: initialGeneration });
   const [failed, setFailed] = useState(false);
-  const skipFirst = useRef(true);
+  // URL khác props server → rows chưa khớp bộ lọc, để effect tự fetch.
+  const skipFirst = useRef(url.q === initialQuery && url.generation === initialGeneration);
 
   useEffect(() => {
     if (skipFirst.current) {
@@ -172,7 +177,7 @@ function DirectoryRow({ m, q }: { m: SearchResult; q: string }) {
     <li className="border-t border-border">
       <Link
         href={`/members/${m.id}`}
-        aria-label={`${m.fullName}, đời ${m.generation}${m.isDeceased ? ", đã khuất" : ""}`}
+        aria-label={`${m.fullName}, đời ${m.generation}${parents.length ? `, con của ${parents.join(" và ")}` : ""}${m.isDeceased ? ", đã khuất" : ""}`}
         className="block px-4 py-3 hover:bg-primary-soft focus-visible:bg-primary-soft"
       >
         {/* Điện thoại (Figma M6): ĐÃ KHUẤT luôn ở dòng riêng dưới tên (review Figma #6). */}
