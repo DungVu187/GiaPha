@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
-export function LogoutButton() {
+/** header: nút viền + dải lỗi ngay dưới header; menu: dòng chữ đỏ rộng hết (ngăn kéo / khung tài khoản), lỗi hiện ngay dưới. */
+export function LogoutButton({ variant = "header" }: { variant?: "header" | "menu" }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
@@ -27,6 +28,21 @@ export function LogoutButton() {
     setPending(false);
   }
 
+  if (variant === "menu") {
+    return (
+      <div className="flex flex-col gap-2">
+        <Button type="button" variant="ghost" onClick={logout} disabled={pending} className="w-full justify-start px-3 text-primary">
+          <LogOut aria-hidden="true" className="size-5" />
+          Đăng xuất
+        </Button>
+        {error && (
+          <p role="alert" className="px-3 text-sm font-medium text-destructive">
+            {error}
+          </p>
+        )}
+      </div>
+    );
+  }
   return (
     <>
       <Button type="button" variant="outline" size="sm" onClick={logout} disabled={pending}>
@@ -36,7 +52,7 @@ export function LogoutButton() {
       {error && (
         <p
           role="alert"
-          className="fixed inset-x-0 top-[104px] z-10 border-b border-destructive bg-primary-soft px-4 py-2 text-sm font-medium text-destructive sm:top-[72px] sm:px-10"
+          className="fixed inset-x-0 top-(--header-h) z-40 border-b border-destructive bg-primary-soft px-4 py-2 text-sm font-medium text-destructive sm:px-10"
         >
           {error}
         </p>

@@ -3,18 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-
-const ITEMS = [
-  { href: "/", label: "Trang chủ", match: (p: string) => p === "/" },
-  { href: "/tree", label: "Cây gia phả", match: (p: string) => p.startsWith("/tree") },
-  { href: "/members", label: "Thành viên", match: (p: string) => p.startsWith("/members") },
-];
+import { NAV_ITEMS } from "./nav-items";
 
 export function AppNav({ className }: { className?: string }) {
   const pathname = usePathname();
   return (
-    <nav aria-label="Điều hướng chính" className={cn("flex gap-6 overflow-x-auto", className)}>
-      {ITEMS.map((item) => {
+    <nav aria-label="Điều hướng chính" className={cn("gap-5 lg:gap-6", className)}>
+      {NAV_ITEMS.map((item) => {
         const active = item.match(pathname);
         return (
           <Link
@@ -22,7 +17,7 @@ export function AppNav({ className }: { className?: string }) {
             href={item.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "shrink-0 border-b-2 py-1 font-bold whitespace-nowrap transition-colors",
+              "flex shrink-0 items-center border-b-2 pt-0.5 font-bold whitespace-nowrap transition-colors",
               active ? "border-primary text-primary" : "border-transparent hover:text-primary",
             )}
           >
