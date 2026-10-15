@@ -12,7 +12,6 @@ Website gia phả cho dòng họ Vũ: quản lý thành viên theo đời, quan 
 - Còn sống / đã khuất, ngày mất, nơi an táng; ngày giỗ âm hoặc dương lịch, tự gợi ý từ ngày mất. Lịch âm theo thuật toán Hồ Ngọc Đức (múi giờ +7).
 - Phân quyền: Admin toàn quyền; thành viên đã liên kết tài khoản sửa được bản thân và người thân trực tiếp; tài khoản chưa liên kết chỉ xem.
 - Ảnh đại diện (JPEG/PNG/WebP, tối đa 5 MB, lưu trên ổ đĩa).
-- Tìm thành viên theo tên, gõ không dấu được.
 - Tự đăng ký tài khoản; nếu gia phả đã có người trùng họ tên + đời chưa có tài khoản thì chọn "Đây là tôi" để nhận hồ sơ, hoặc tạo hồ sơ mới.
 - Cây gia phả tự dựng theo đời: phóng to/thu nhỏ, kéo, thu gọn/mở nhánh, tìm người trên cây, bấm thẻ xem chi tiết; chỉ vẽ người trong dòng (theo dòng cha) và vợ/chồng.
 - Danh sách thành viên nhóm theo đời: lọc theo đời, một ô tìm khớp tên người hoặc tên bố/mẹ (gõ không dấu được).

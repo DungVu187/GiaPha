@@ -49,7 +49,7 @@ function Card({ c, spouseOf, highlight, height, compact }: { c: TreeCard; spouse
     >
       {compact ? (
         <>
-          <span className="line-clamp-3 font-heading text-[26px] leading-8 font-bold">{c.fullName}</span>
+          <span className="line-clamp-2 font-heading text-[26px] leading-8 font-bold">{c.fullName}</span>
           <span className="text-lg text-accent-text">Đời {c.generation}</span>
         </>
       ) : (

@@ -11,7 +11,7 @@ const zoomPct = async (page: Page) =>
 
 // Gợi ý thao tác lần đầu có thể che phần tử cần bấm → coi như đã đóng, trừ test kiểm chính gợi ý đó.
 test.beforeEach(async ({ page }, info) => {
-  if (!info.title.startsWith("thu nhỏ dưới 50%"))
+  if (!info.title.startsWith("thu nhỏ dưới 50%") && !info.title.startsWith("gợi ý hiện"))
     await page.addInitScript(() => localStorage.setItem("giapha.treeHintDismissed", "1"));
 });
 
@@ -216,4 +216,20 @@ test("chọn kết quả tìm → focus bàn phím vào thẻ", async ({ page })
   await page.getByTestId("tree-search-results").getByRole("button", { name: /VŨ VĂN TÔI/ }).click();
   const toi = await memberIdByName(page, "Vũ Văn Tôi");
   await expect(lineage(page, toi)).toBeFocused();
+});
+
+test("gợi ý hiện (điện thoại): kết quả tìm không bị gợi ý che, bấm được", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await loginAndWait(page, E2E_ADMIN.username, E2E_ADMIN.password);
+  await page.goto("/tree");
+  await expect(page.getByRole("button", { name: "Đã hiểu" })).toBeVisible();
+  await page.getByLabel("Tìm người trên cây").fill("vu van toi");
+  const btn = page.getByTestId("tree-search-results").getByRole("button").first();
+  await expect(btn).toBeVisible();
+  const hit = await btn.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+    return top === el || el.contains(top);
+  });
+  expect(hit).toBe(true);
 });

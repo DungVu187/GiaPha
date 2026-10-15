@@ -44,7 +44,7 @@ test("tablet: header một hàng 72px, không có thanh tab, nút tài khoản m
   await expect(page).toHaveURL(/\/login$/);
 });
 
-test("desktop: menu có Lịch giỗ, /treeX không làm sáng mục Cây gia phả", async ({ page }) => {
+test("desktop: menu có Lịch giỗ trỏ /anniversaries, nút Đăng xuất và tên đăng nhập hiện", async ({ page }) => {
   await loginAndWait(page, E2E_ADMIN.username, E2E_ADMIN.password);
   const nav = page.getByRole("navigation", { name: "Điều hướng chính" });
   await expect(nav.getByRole("link", { name: "Lịch giỗ" })).toHaveAttribute("href", "/anniversaries");

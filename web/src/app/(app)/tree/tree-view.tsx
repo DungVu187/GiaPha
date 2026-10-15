@@ -192,35 +192,38 @@ function TreeCanvas({ data, myMemberId, focusId }: Props) {
       />
       <BandLabels bands={layout.bands} />
 
-      <TreeSearchPanel data={data} highlightId={highlightId} onPick={focusMember} className="absolute top-3 left-3 z-10 w-[min(360px,calc(100%-24px))]" />
+      <TreeSearchPanel data={data} highlightId={highlightId} onPick={focusMember} className="absolute top-3 left-3 z-20 w-[min(360px,calc(100%-24px))]" />
 
-      {focusId !== null && focusFamily === null && !missingClosed && (
-        <div className="absolute top-[84px] left-3 z-10 flex w-[min(360px,calc(100%-24px))] items-start gap-2 rounded-lg border border-border bg-card p-3 shadow-(--shadow-card)">
-          <p role="status" className="flex-1 text-sm">
-            Người này không có trên cây gia phả (nhánh ngoại hoặc chưa gắn bố).
-          </p>
-          <button
-            type="button"
-            aria-label="Đóng thông báo"
-            onClick={() => setMissingClosed(true)}
-            className="-m-1 flex size-10 shrink-0 items-center justify-center rounded-md hover:bg-muted"
-          >
-            <X aria-hidden="true" className="size-5" />
-          </button>
-        </div>
-      )}
+      {/* Một cột dưới bảng tìm: thông báo + gợi ý không chồng nhau. */}
+      <div className="absolute top-[84px] left-3 z-10 flex w-[min(360px,calc(100%-24px))] flex-col gap-2">
+        {focusId !== null && focusFamily === null && !missingClosed && (
+          <div className="flex items-start gap-2 rounded-lg border border-border bg-card p-3 shadow-(--shadow-card)">
+            <p role="status" className="flex-1 text-sm">
+              Người này không có trên cây gia phả (nhánh ngoại hoặc chưa gắn bố).
+            </p>
+            <button
+              type="button"
+              aria-label="Đóng thông báo"
+              onClick={() => setMissingClosed(true)}
+              className="-m-1 flex size-10 shrink-0 items-center justify-center rounded-md hover:bg-muted"
+            >
+              <X aria-hidden="true" className="size-5" />
+            </button>
+          </div>
+        )}
 
-      {!hintDismissed && (
-        <div className="absolute top-[84px] right-3 left-3 z-10 flex items-start gap-3 rounded-lg border border-accent bg-card p-3 text-[15px] shadow-(--shadow-card) sm:top-3 sm:right-auto sm:left-[384px] sm:w-80">
-          <p className="flex-1">
-            <span className="pointer-coarse:hidden">Kéo để di chuyển, lăn chuột hoặc bấm + − để phóng to/thu nhỏ.</span>
-            <span className="hidden pointer-coarse:inline">Chụm hai ngón để phóng to/thu nhỏ, kéo một ngón để di chuyển.</span> Bấm vào thẻ để xem chi tiết.
-          </p>
-          <Button size="sm" variant="outline" onClick={dismissHint}>
-            Đã hiểu
-          </Button>
-        </div>
-      )}
+        {!hintDismissed && (
+          <div className="flex items-start gap-3 rounded-lg border border-accent bg-card p-3 text-[15px] shadow-(--shadow-card)">
+            <p className="flex-1">
+              <span className="pointer-coarse:hidden">Kéo để di chuyển, lăn chuột hoặc bấm + − để phóng to/thu nhỏ.</span>
+              <span className="hidden pointer-coarse:inline">Chụm hai ngón để phóng to/thu nhỏ, kéo một ngón để di chuyển.</span> Bấm vào thẻ để xem chi tiết.
+            </p>
+            <Button size="sm" variant="outline" onClick={dismissHint}>
+              Đã hiểu
+            </Button>
+          </div>
+        )}
+      </div>
 
       <aside
         id="tree-legend"
