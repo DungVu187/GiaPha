@@ -19,7 +19,7 @@ test("sai mật khẩu hiện lỗi, vẫn ở /login", async ({ page }) => {
 
 test("đăng nhập → thấy lời chào → đăng xuất → bị khóa lại", async ({ page }) => {
   await login(page, `  ${E2E_ADMIN.username.toUpperCase()} `, E2E_ADMIN.password);
-  await expect(page.getByRole("heading", { name: `Xin chào ${E2E_ADMIN.username}` })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `Xin chào, ${E2E_ADMIN.username}` })).toBeVisible();
 
   const cookie = (await page.context().cookies()).find((c) => c.name === "giapha_session");
   expect(cookie?.httpOnly).toBe(true);
