@@ -53,7 +53,7 @@ describe('POST /api/auth/register', () => {
       .get('/api/auth/me')
       .set('Cookie', cookie!.split(';')[0]!);
     expect(me.status).toBe(200);
-    expect(me.body).toEqual(res.body);
+    expect(me.body).toMatchObject(res.body);
     // Người vừa đăng ký là member đã liên kết → sửa được hồ sơ của chính mình.
     const detail = await http()
       .get(`/api/members/${res.body.memberId}`)

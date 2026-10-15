@@ -152,7 +152,18 @@ export class AuthController {
   }
 
   @Get('me')
-  me(@CurrentUser() user: SessionUser): SessionUser {
-    return user;
+  async me(
+    @CurrentUser() user: SessionUser,
+  ): Promise<
+    SessionUser & { member: { fullName: string; generation: number } | null }
+  > {
+    const member =
+      user.memberId === null
+        ? null
+        : await this.prisma.member.findUnique({
+            where: { id: user.memberId },
+            select: { fullName: true, generation: true },
+          });
+    return { ...user, member };
   }
 }

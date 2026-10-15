@@ -2,6 +2,7 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createTestApp } from '../../test/helpers/app.js';
+import { createMember, loginAs } from '../../test/helpers/factories.js';
 import { testDb as db } from '../../test/helpers/test-db.js';
 import { hashPassword } from './password.js';
 import { seedAdmin } from './seed-admin.js';
@@ -148,7 +149,7 @@ describe('auth API', () => {
     expect((await http().get('/api/auth/me')).status).toBe(401);
   });
 
-  it('GET /me sau khi đăng nhập → 200 user', async () => {
+  it('GET /me sau khi đăng nhập → 200 user, chưa liên kết → member null', async () => {
     const agent = request.agent(app.getHttpServer());
     await agent.post('/api/auth/login').send(ADMIN).expect(200);
     const res = await agent.get('/api/auth/me');
@@ -157,6 +158,18 @@ describe('auth API', () => {
       username: 'admin',
       role: 'ADMIN',
       memberId: null,
+      member: null,
+    });
+  });
+
+  it('GET /me tài khoản đã liên kết → member { fullName, generation }', async () => {
+    const m = await createMember(db, { fullName: 'VŨ VĂN TÔI', generation: 3 });
+    const { cookie } = await loginAs(db, { memberId: m.id });
+    const res = await http().get('/api/auth/me').set('Cookie', cookie);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      memberId: m.id,
+      member: { fullName: 'VŨ VĂN TÔI', generation: 3 },
     });
   });
 

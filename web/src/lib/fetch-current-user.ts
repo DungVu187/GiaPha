@@ -5,6 +5,7 @@ export type SessionUser = {
   username: string;
   role: "ADMIN" | "MEMBER";
   memberId: number | null;
+  member: { fullName: string; generation: number } | null;
 };
 
 export async function fetchCurrentUser(

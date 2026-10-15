@@ -32,6 +32,8 @@ import {
   deleteMember,
   getMemberDetail,
   INVALID,
+  listDirectory,
+  memberStats,
   NOT_FOUND,
   removeSpouse,
   searchMembers,
@@ -108,6 +110,21 @@ export class MembersController {
       ),
       excludeId: optionalParam(query.excludeId, positiveIntOf),
       limit: optionalParam(query.limit, positiveIntOf),
+    });
+  }
+
+  @Get('stats')
+  stats() {
+    return memberStats(this.prisma);
+  }
+
+  @Get('directory')
+  directory(@Query() query: Record<string, unknown>) {
+    return listDirectory(this.prisma, {
+      q: optionalParam(query.q, (v) =>
+        typeof v === 'string' && v.length <= 100 ? v : null,
+      ),
+      generation: optionalParam(query.generation, positiveIntOf),
     });
   }
 

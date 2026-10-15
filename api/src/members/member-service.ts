@@ -561,6 +561,24 @@ export async function getMemberDetail(
   };
 }
 
+const SEARCH_SELECT = {
+  ...SUMMARY_SELECT,
+  father: { select: { fullName: true } },
+  mother: { select: { fullName: true } },
+} as const satisfies Prisma.MemberSelect;
+
+function toSearchResult({
+  father,
+  mother,
+  ...m
+}: Prisma.MemberGetPayload<{ select: typeof SEARCH_SELECT }>): SearchResult {
+  return {
+    ...m,
+    fatherName: father?.fullName ?? null,
+    motherName: mother?.fullName ?? null,
+  };
+}
+
 export async function searchMembers(
   db: Db,
   query: {
@@ -579,17 +597,49 @@ export async function searchMembers(
       ...(query.gender ? { gender: query.gender } : {}),
       ...(query.excludeId ? { id: { not: query.excludeId } } : {}),
     },
-    select: {
-      ...SUMMARY_SELECT,
-      father: { select: { fullName: true } },
-      mother: { select: { fullName: true } },
-    },
+    select: SEARCH_SELECT,
     orderBy: [{ generation: 'asc' }, { fullName: 'asc' }, { id: 'asc' }],
     take: Math.min(Math.max(query.limit ?? 20, 1), 50),
   });
-  return rows.map(({ father, mother, ...m }) => ({
-    ...m,
-    fatherName: father?.fullName ?? null,
-    motherName: mother?.fullName ?? null,
-  }));
+  return rows.map(toSearchResult);
+}
+
+// Danh sách thành viên: khớp tên người hoặc tên bố / tên mẹ (spec §6).
+// ponytail: trả hết, không phân trang — gia phả < ~300 người (D11); thêm phân trang khi vượt vài nghìn.
+export async function listDirectory(
+  db: Db,
+  query: { q?: string; generation?: number },
+): Promise<SearchResult[]> {
+  const q = query.q ? toSearchName(query.q) : '';
+  const rows = await db.member.findMany({
+    where: {
+      ...(q
+        ? {
+            OR: [
+              { searchName: { contains: q } },
+              { father: { is: { searchName: { contains: q } } } },
+              { mother: { is: { searchName: { contains: q } } } },
+            ],
+          }
+        : {}),
+      ...(query.generation ? { generation: query.generation } : {}),
+    },
+    select: SEARCH_SELECT,
+    orderBy: [{ generation: 'asc' }, { fullName: 'asc' }, { id: 'asc' }],
+  });
+  return rows.map(toSearchResult);
+}
+
+export async function memberStats(
+  db: Db,
+): Promise<{ memberCount: number; generations: number[] }> {
+  const rows = await db.member.groupBy({
+    by: ['generation'],
+    _count: { _all: true },
+    orderBy: { generation: 'asc' },
+  });
+  return {
+    memberCount: rows.reduce((sum, r) => sum + r._count._all, 0),
+    generations: rows.map((r) => r.generation),
+  };
 }
