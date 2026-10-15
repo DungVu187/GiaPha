@@ -1,13 +1,16 @@
 import { apiGet } from "@/lib/api";
 import { requireUser } from "@/lib/current-user";
 import type { TreeData } from "@/lib/tree-types";
+import { BranchList } from "./branch-list";
 import { TreeView } from "./tree-view";
 
 // Khung toàn màn hình giữa header và thanh tab đáy (biến --header-h / --tabbar-h ở layout.tsx).
-export default async function TreePage({ searchParams }: { searchParams: Promise<{ focus?: string | string[] }> }) {
+export default async function TreePage({ searchParams }: { searchParams: Promise<{ focus?: string | string[]; view?: string | string[] }> }) {
   const user = await requireUser();
   const data = (await apiGet<TreeData>("/api/tree")) ?? { families: [], roots: [] };
-  const raw = (await searchParams).focus;
+  const sp = await searchParams;
+  if (sp.view === "list") return <BranchList data={data} myMemberId={user.memberId} />;
+  const raw = sp.focus;
   const focus = typeof raw === "string" && /^\d{1,10}$/.test(raw) ? Number(raw) : null;
   return (
     <div data-testid="tree-frame" className="fixed inset-x-0 top-(--header-h) bottom-(--tabbar-h) bg-background">
