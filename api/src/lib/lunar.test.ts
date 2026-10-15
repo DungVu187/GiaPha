@@ -4,6 +4,7 @@ import {
   jdToDate,
   leapMonthOfYear,
   lunarToSolar,
+  lunarYearName,
   solarToLunar,
 } from './lunar.js';
 
@@ -138,5 +139,17 @@ describe('phạm vi hỗ trợ', () => {
     expect(lunarToSolar(solarToLunar(s(31, 12, 2199)))).toEqual(
       s(31, 12, 2199),
     );
+  });
+});
+
+describe('lunarYearName', () => {
+  it.each([
+    [2026, 'Bính Ngọ'],
+    [2025, 'Ất Tỵ'],
+    [2027, 'Đinh Mùi'],
+    [1984, 'Giáp Tý'],
+    [1800, 'Canh Thân'],
+  ])('%i → %s', (year, name) => {
+    expect(lunarYearName(year)).toBe(name);
   });
 });

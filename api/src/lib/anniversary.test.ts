@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  type AnniversarySource,
   nextAnniversary,
   suggestAnniversary,
   todayInVietnam,
+  upcomingAnniversaries,
 } from './anniversary.js';
 import { jdFromDate, lunarToSolar } from './lunar.js';
 
@@ -153,5 +155,88 @@ describe('nextAnniversary — dương lịch', () => {
       nextAnniversary({ day: 29, month: 2, calendar: 'SOLAR' }, s(1, 3, 2027))
         ?.date,
     ).toEqual(s(29, 2, 2028));
+  });
+});
+
+describe('upcomingAnniversaries', () => {
+  const today = { year: 2026, month: 10, day: 3 };
+  const person = (
+    id: number,
+    a: Partial<AnniversarySource> = {},
+  ): AnniversarySource => ({
+    id,
+    fullName: `VŨ VĂN ${id}`,
+    generation: 1,
+    avatarPath: null,
+    isDeceased: true,
+    anniversaryDay: null,
+    anniversaryMonth: null,
+    anniversaryCalendar: null,
+    ...a,
+  });
+  const lunar = (day: number, month: number) => ({
+    anniversaryDay: day,
+    anniversaryMonth: month,
+    anniversaryCalendar: 'LUNAR' as const,
+  });
+  const solar = (day: number, month: number) => ({
+    anniversaryDay: day,
+    anniversaryMonth: month,
+    anniversaryCalendar: 'SOLAR' as const,
+  });
+
+  it('tính ngày + số ngày còn lại, xếp gần nhất trước', () => {
+    const r = upcomingAnniversaries(
+      [
+        person(1, lunar(25, 8)),
+        person(2, solar(26, 10)),
+        person(3, lunar(23, 8)),
+        person(4, solar(2, 10)),
+      ],
+      today,
+    );
+    expect(r.map((x) => [x.id, x.daysLeft])).toEqual([
+      [3, 0],
+      [1, 2],
+      [2, 23],
+      [4, 364],
+    ]);
+    expect(r[1]).toMatchObject({
+      day: 25,
+      month: 8,
+      calendar: 'LUNAR',
+      date: { year: 2026, month: 10, day: 5 },
+    });
+  });
+
+  it('bỏ người còn sống và người thiếu ngày / tháng / lịch giỗ', () => {
+    const r = upcomingAnniversaries(
+      [
+        person(1, { ...lunar(25, 8), isDeceased: false }),
+        person(2, { ...lunar(25, 8), anniversaryCalendar: null }),
+        person(3, { ...lunar(25, 8), anniversaryDay: null }),
+        person(4, { ...lunar(25, 8), anniversaryMonth: null }),
+        person(5, lunar(25, 8)),
+      ],
+      today,
+    );
+    expect(r.map((x) => x.id)).toEqual([5]);
+  });
+
+  it('cùng ngày → đời tăng dần, rồi họ tên, rồi id', () => {
+    const r = upcomingAnniversaries(
+      [
+        person(1, { ...solar(26, 10), generation: 3, fullName: 'VŨ VĂN AN' }),
+        person(2, { ...solar(26, 10), generation: 2, fullName: 'VŨ VĂN BA' }),
+        person(3, { ...solar(26, 10), generation: 2, fullName: 'VŨ VĂN AN' }),
+        person(4, { ...solar(26, 10), generation: 2, fullName: 'VŨ VĂN AN' }),
+      ],
+      today,
+    );
+    expect(r.map((x) => x.id)).toEqual([3, 4, 2, 1]);
+  });
+
+  it('danh sách rỗng → []', () => {
+    expect(upcomingAnniversaries([], today)).toEqual([]);
   });
 });

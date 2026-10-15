@@ -236,3 +236,35 @@ export function leapMonthOfYear(lunarYear: number): number {
   const late = leapMonthInSpan(this11, next11, tz);
   return late === 11 || late === 12 ? late : 0;
 }
+
+const CAN = [
+  'Giáp',
+  'Ất',
+  'Bính',
+  'Đinh',
+  'Mậu',
+  'Kỷ',
+  'Canh',
+  'Tân',
+  'Nhâm',
+  'Quý',
+];
+const CHI = [
+  'Tý',
+  'Sửu',
+  'Dần',
+  'Mão',
+  'Thìn',
+  'Tỵ',
+  'Ngọ',
+  'Mùi',
+  'Thân',
+  'Dậu',
+  'Tuất',
+  'Hợi',
+];
+
+/** Tên năm âm lịch theo can chi, vd 2026 → "Bính Ngọ". */
+export function lunarYearName(year: number): string {
+  return `${CAN[(year + 6) % 10]} ${CHI[(year + 8) % 12]}`;
+}

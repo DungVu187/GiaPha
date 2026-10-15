@@ -91,3 +91,59 @@ export function nextAnniversary(
   }
   return date ? { date, daysLeft: jd(date) - todayJd } : null;
 }
+
+export type AnniversarySource = {
+  id: number;
+  fullName: string;
+  generation: number;
+  avatarPath: string | null;
+  isDeceased: boolean;
+  anniversaryDay: number | null;
+  anniversaryMonth: number | null;
+  anniversaryCalendar: CalendarType | null;
+};
+export type UpcomingAnniversary = Pick<
+  AnniversarySource,
+  'id' | 'fullName' | 'generation' | 'avatarPath'
+> &
+  Anniversary &
+  NextAnniversary;
+
+/** Ngày giỗ sắp tới của người đã khuất có đủ ngày + tháng + lịch giỗ; gần nhất trước. */
+export function upcomingAnniversaries(
+  members: AnniversarySource[],
+  today: SimpleDate,
+): UpcomingAnniversary[] {
+  const out: UpcomingAnniversary[] = [];
+  for (const m of members) {
+    if (
+      !m.isDeceased ||
+      m.anniversaryDay === null ||
+      m.anniversaryMonth === null ||
+      m.anniversaryCalendar === null
+    )
+      continue;
+    const a: Anniversary = {
+      day: m.anniversaryDay,
+      month: m.anniversaryMonth,
+      calendar: m.anniversaryCalendar,
+    };
+    const next = nextAnniversary(a, today);
+    if (!next) continue;
+    out.push({
+      id: m.id,
+      fullName: m.fullName,
+      generation: m.generation,
+      avatarPath: m.avatarPath,
+      ...a,
+      ...next,
+    });
+  }
+  return out.sort(
+    (x, y) =>
+      x.daysLeft - y.daysLeft ||
+      x.generation - y.generation ||
+      x.fullName.localeCompare(y.fullName, 'vi') ||
+      x.id - y.id,
+  );
+}
