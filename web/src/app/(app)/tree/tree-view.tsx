@@ -1,56 +1,95 @@
 "use client";
 
 import "@xyflow/react/dist/style.css";
-import { ReactFlow, ReactFlowProvider, useReactFlow, useViewport, type Edge, type Node, type NodeProps } from "@xyflow/react";
-import { Maximize, Minus, Plus, Search, UserRound } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
-import { ancestorFamilyIds, familyIdOf, layoutTree, searchTree } from "@/lib/tree-layout";
+import { ReactFlow, ReactFlowProvider, useReactFlow, useStore, type Edge, type Node, type NodeProps, type ReactFlowInstance } from "@xyflow/react";
+import { List, Maximize, Minus, Network, Plus, UserRound, X } from "lucide-react";
+import Link from "next/link";
+import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { ancestorFamilyIds, familyIdOf, initialView, layoutTree, type TreeLayout } from "@/lib/tree-layout";
 import type { TreeData } from "@/lib/tree-types";
+import { cn } from "@/lib/utils";
 import { FamilyNode, type FamilyFlowNode } from "./family-node";
+import { TreeSearchPanel } from "./tree-search-panel";
 
-type BandNode = Node<{ generation: number; width: number; height: number }, "band">;
+type BandNode = Node<{ width: number; height: number; odd: boolean }, "band">;
 
+// Nền dải đời (toạ độ cây). Nhãn "Đời N" vẽ ở BandLabels để ghim mép trái khung nhìn.
 function Band({ data }: NodeProps<BandNode>) {
+  return <div className={cn("border-t border-border/60", data.odd && "bg-secondary/40")} style={{ width: data.width, height: data.height }} />;
+}
+
+const nodeTypes = { family: FamilyNode, band: Band };
+// "Vừa màn hình" chừa chỗ cho bảng tìm (trên) và nút zoom (dưới) — lỗi test thực tế: bảng tìm che khối gốc.
+const FIT_OPTS = { padding: { top: "96px", right: "24px", bottom: "96px", left: "80px" } } as const;
+const LABEL_H = 56;
+
+function ZoomLevel() {
+  const zoom = useStore((s) => s.transform[2]);
   return (
-    <div
-      data-band={data.generation}
-      className={cn("flex items-start border-t border-border/60 pt-3 pl-4", data.generation % 2 === 1 && "bg-secondary/40")}
-      style={{ width: data.width, height: data.height }}
-    >
-      <span className="font-heading text-muted-foreground">
-        Đời <span className="block text-3xl leading-none text-foreground">{data.generation}</span>
-      </span>
+    <span data-testid="zoom-level" className="border-t border-border px-1 py-1 text-center text-xs">
+      {Math.round(zoom * 100)}%
+    </span>
+  );
+}
+
+/** Nhãn "Đời N" ghim mép trái, chạy dọc theo dải đời khi kéo / zoom. */
+function BandLabels({ bands }: { bands: TreeLayout["bands"] }) {
+  const [, ty, zoom] = useStore((s) => s.transform);
+  const viewH = useStore((s) => s.height);
+  return (
+    <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 z-[5] w-[72px] overflow-hidden">
+      {bands.map((b) => {
+        const top = b.y * zoom + ty;
+        const bottom = top + b.height * zoom;
+        if (bottom < 0 || top > viewH) return null;
+        const y = Math.min(Math.max(top, 0), bottom - LABEL_H) + 8;
+        return (
+          <div key={b.generation} data-band={b.generation} className="absolute left-2" style={{ top: y }}>
+            <span className="block rounded-md bg-card/90 px-2 py-1 text-center font-heading leading-tight text-muted-foreground shadow-sm">
+              Đời<span className="block text-2xl text-foreground">{b.generation}</span>
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-const nodeTypes = { family: FamilyNode, band: Band };
-const FIT_ALL = { padding: 0.1 };
+const HINT_KEY = "giapha.treeHintDismissed";
+const hintListeners = new Set<() => void>();
+function subscribeHint(cb: () => void) {
+  hintListeners.add(cb);
+  window.addEventListener("storage", cb);
+  return () => {
+    hintListeners.delete(cb);
+    window.removeEventListener("storage", cb);
+  };
+}
+function useHintDismissed(): [boolean, () => void] {
+  const dismissed = useSyncExternalStore(subscribeHint, () => localStorage.getItem(HINT_KEY) === "1", () => true);
+  const dismiss = () => {
+    localStorage.setItem(HINT_KEY, "1");
+    hintListeners.forEach((l) => l());
+  };
+  return [dismissed, dismiss];
+}
 
 type Props = { data: TreeData; myMemberId: number | null; focusId: number | null };
 
 function TreeCanvas({ data, myMemberId, focusId }: Props) {
   const { setCenter, zoomIn, zoomOut, fitView } = useReactFlow();
-  const { zoom } = useViewport();
-  // Focus từ URL: mặc định mọi nhánh mở sẵn nên chỉ cần tô sáng + để React Flow căn vào khối đó lúc đầu.
+  const wrapRef = useRef<HTMLDivElement>(null);
   const focusFamily = focusId !== null ? familyIdOf(data, focusId) : null;
+  const myFamily = myMemberId !== null ? familyIdOf(data, myMemberId) : null;
   const [collapsed, setCollapsed] = useState<ReadonlySet<number>>(() => new Set());
   const [highlightId, setHighlightId] = useState<number | null>(focusFamily !== null ? focusId : null);
-  const [initialFit] = useState(() =>
-    focusFamily !== null ? { nodes: [{ id: `f-${focusFamily}` }], maxZoom: 1 } : FIT_ALL,
-  );
-  const [query, setQuery] = useState("");
-  // Thu danh sách sau khi chọn để bảng tìm không che thẻ vừa căn giữa (điện thoại); sửa ô / focus → mở lại.
-  const [resultsOpen, setResultsOpen] = useState(true);
+  const [missingClosed, setMissingClosed] = useState(false);
   const [legendOpen, setLegendOpen] = useState(false);
+  const [hintDismissed, dismissHint] = useHintDismissed();
 
   const layout = useMemo(() => layoutTree(data, collapsed), [data, collapsed]);
   const byId = useMemo(() => new Map(data.families.map((f) => [f.id, f])), [data]);
-  const hits = useMemo(() => searchTree(data, query), [data, query]);
 
   const toggle = useCallback((id: number) => {
     setCollapsed((prev) => {
@@ -61,7 +100,20 @@ function TreeCanvas({ data, myMemberId, focusId }: Props) {
     });
   }, []);
 
-  // Mở nhánh tổ tiên, tính lại vị trí ngay tại đây rồi căn giữa (không setState trong effect).
+  // Điểm mở trang (P7) — tính khi React Flow sẵn sàng, theo kích thước khung thật.
+  function onInit(rf: ReactFlowInstance<FamilyFlowNode | BandNode>) {
+    const box = wrapRef.current!.getBoundingClientRect();
+    const v = initialView(layout, {
+      focusFamilyId: focusFamily,
+      homeFamilyId: myFamily,
+      // Trừ phần đệm của FIT_OPTS (trái 80 + phải 24, trên 96 + dưới 96) để "vừa màn hình" thật sự ≥ 60%.
+      viewport: { width: box.width - 104, height: box.height - 192 },
+    });
+    if (v.kind === "fit") void rf.fitView(FIT_OPTS);
+    else void rf.setCenter(v.x, v.y, { zoom: 1 });
+  }
+
+  // Mở nhánh tổ tiên, tính lại vị trí ngay tại đây rồi căn giữa + focus thẻ (không setState trong effect — R3 GĐ4).
   function focusMember(memberId: number) {
     const fid = familyIdOf(data, memberId);
     if (fid === null) return;
@@ -71,6 +123,14 @@ function TreeCanvas({ data, myMemberId, focusId }: Props) {
     setCollapsed(next);
     setHighlightId(memberId);
     if (laid) void setCenter(laid.x + laid.width / 2, laid.y + laid.height / 2, { zoom: 1, duration: 400 });
+    // Node mới dựng lại bị React Flow ẩn (visibility: hidden) tới khi đo xong → thử lại vài khung hình đến khi focus được.
+    const tryFocus = (left: number) =>
+      requestAnimationFrame(() => {
+        const el = wrapRef.current?.querySelector<HTMLElement>(`[data-member-id="${memberId}"]`);
+        el?.focus({ preventScroll: true });
+        if (document.activeElement !== el && left > 0) tryFocus(left - 1);
+      });
+    tryFocus(30);
   }
 
   const nodes = useMemo<(FamilyFlowNode | BandNode)[]>(
@@ -79,7 +139,7 @@ function TreeCanvas({ data, myMemberId, focusId }: Props) {
         id: `band-${b.generation}`,
         type: "band",
         position: { x: 0, y: b.y },
-        data: { generation: b.generation, width: layout.width, height: b.height },
+        data: { width: layout.width, height: b.height, odd: b.generation % 2 === 1 },
         draggable: false,
         selectable: false,
         focusable: false,
@@ -112,10 +172,9 @@ function TreeCanvas({ data, myMemberId, focusId }: Props) {
       })),
     [layout],
   );
-  const canFocusMe = myMemberId !== null && familyIdOf(data, myMemberId) !== null;
 
   return (
-    <div className="relative h-full w-full">
+    <div ref={wrapRef} className="relative h-full w-full">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -125,81 +184,45 @@ function TreeCanvas({ data, myMemberId, focusId }: Props) {
         elementsSelectable={false}
         minZoom={0.1}
         maxZoom={1.5}
-        fitView
-        fitViewOptions={initialFit}
+        onInit={onInit}
       />
+      <BandLabels bands={layout.bands} />
 
-      <section
-        aria-label="Bảng tìm người"
-        className="absolute top-3 left-3 z-10 w-[min(320px,calc(100%-24px))] rounded-lg border border-border bg-card p-3 shadow-[var(--shadow-card)]"
-      >
-        <Label htmlFor="tree-search" className="mb-2 block font-semibold">
-          Tìm người trên cây
-        </Label>
-        <div className="relative">
-          <Search aria-hidden="true" className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            id="tree-search"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setResultsOpen(true);
-            }}
-            onFocus={() => setResultsOpen(true)}
-            placeholder="Nhập tên, gõ không dấu được"
-            className="pl-9"
-          />
-        </div>
-        {resultsOpen && query.trim() !== "" && (
-          <>
-            <p role="status" className="mt-2 text-sm text-muted-foreground">
-              {hits.length > 0 ? `${hits.length} kết quả (tìm không dấu)` : "Không tìm thấy trên cây."}
-            </p>
-            {hits.length > 0 && (
-              <ul data-testid="tree-search-results" className="mt-2 flex max-h-56 flex-col gap-1 overflow-y-auto">
-                {hits.map((h) => (
-                  <li key={h.memberId}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setResultsOpen(false);
-                        focusMember(h.memberId);
-                      }}
-                      aria-current={highlightId === h.memberId}
-                      className="w-full rounded-md border border-transparent px-2 py-1.5 text-left hover:bg-muted aria-[current=true]:border-accent aria-[current=true]:bg-accent/15"
-                    >
-                      <span className="block font-semibold">{h.fullName}</span>
-                      <span className="block text-xs text-muted-foreground">
-                        Đời {h.generation} — {h.subtitle}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </>
-        )}
-        {focusId !== null && focusFamily === null && (
-          <p role="status" className="mt-2 text-sm text-muted-foreground">
-            Người này không có trên cây gia phả (nhánh ngoại).
+      <TreeSearchPanel data={data} highlightId={highlightId} onPick={focusMember} className="absolute top-3 left-3 z-10 w-[min(360px,calc(100%-24px))]" />
+
+      {focusId !== null && focusFamily === null && !missingClosed && (
+        <div className="absolute top-[84px] left-3 z-10 flex w-[min(360px,calc(100%-24px))] items-start gap-2 rounded-lg border border-border bg-card p-3 shadow-(--shadow-card)">
+          <p role="status" className="flex-1 text-sm">
+            Người này không có trên cây gia phả (nhánh ngoại hoặc chưa gắn bố).
           </p>
-        )}
-      </section>
+          <button
+            type="button"
+            aria-label="Đóng thông báo"
+            onClick={() => setMissingClosed(true)}
+            className="-m-1 flex size-10 shrink-0 items-center justify-center rounded-md hover:bg-muted"
+          >
+            <X aria-hidden="true" className="size-5" />
+          </button>
+        </div>
+      )}
 
-      <button
-        type="button"
-        aria-expanded={legendOpen}
-        aria-controls="tree-legend"
-        onClick={() => setLegendOpen((v) => !v)}
-        className="absolute right-3 bottom-8 z-20 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium shadow-sm lg:hidden"
-      >
-        Chú giải
-      </button>
+      {!hintDismissed && (
+        <div className="absolute top-[84px] right-3 left-3 z-10 flex items-start gap-3 rounded-lg border border-accent bg-card p-3 text-[15px] shadow-(--shadow-card) sm:top-3 sm:right-auto sm:left-[384px] sm:w-80">
+          <p className="flex-1">
+            <span className="pointer-coarse:hidden">Kéo để di chuyển, lăn chuột hoặc bấm + − để phóng to/thu nhỏ.</span>
+            <span className="hidden pointer-coarse:inline">Chụm hai ngón để phóng to/thu nhỏ, kéo một ngón để di chuyển.</span> Bấm vào thẻ để xem chi tiết.
+          </p>
+          <Button size="sm" variant="outline" onClick={dismissHint}>
+            Đã hiểu
+          </Button>
+        </div>
+      )}
+
       <aside
         id="tree-legend"
         aria-label="Chú giải"
         className={cn(
-          "absolute right-3 bottom-20 z-10 w-64 rounded-lg border border-border bg-card p-3 text-sm shadow-[var(--shadow-card)] lg:top-3 lg:bottom-auto lg:block",
+          "absolute right-3 bottom-36 z-10 w-64 rounded-lg border border-border bg-card p-3 text-sm shadow-(--shadow-card) lg:top-3 lg:bottom-auto lg:block",
           legendOpen ? "block" : "hidden",
         )}
       >
@@ -211,7 +234,7 @@ function TreeCanvas({ data, myMemberId, focusId }: Props) {
           </li>
           <li className="flex items-center gap-2">
             <span aria-hidden="true" className="h-3 w-6 rounded-sm border border-t-4 border-border border-t-accent bg-card" />
-            Vợ/chồng ngoài họ
+            Vợ/chồng (ghi “vợ của …”)
           </li>
           <li className="flex items-center gap-2">
             <span aria-hidden="true" className="h-3 w-6 rounded-sm border border-border bg-muted" />
@@ -219,57 +242,82 @@ function TreeCanvas({ data, myMemberId, focusId }: Props) {
           </li>
           <li className="flex items-center gap-2">
             <span aria-hidden="true" className="h-3 w-6 rounded-sm border-2 border-accent bg-card" />
-            Kết quả tìm kiếm
+            Đang chọn / kết quả tìm
           </li>
         </ul>
         <p className="mt-2 text-xs text-muted-foreground">Không vẽ con của con gái (nhánh ngoại).</p>
       </aside>
 
+      <div className="absolute right-3 bottom-3 z-20 flex flex-col items-end gap-2">
+        <Link href="/tree?view=list" className={buttonVariants({ variant: "outline", size: "sm" })}>
+          <List aria-hidden="true" /> Dạng danh sách
+        </Link>
+        <Button
+          variant="outline"
+          size="sm"
+          aria-expanded={legendOpen}
+          aria-controls="tree-legend"
+          onClick={() => setLegendOpen((v) => !v)}
+          className="lg:hidden"
+        >
+          Chú giải
+        </Button>
+      </div>
+
       <div className="absolute bottom-3 left-3 z-10 flex items-end gap-3">
         <div className="flex flex-col overflow-hidden rounded-md border border-border bg-card shadow-sm">
-          <button type="button" aria-label="Phóng to" onClick={() => void zoomIn()} className="p-2 hover:bg-muted">
-            <Plus aria-hidden="true" className="size-4" />
+          <button type="button" aria-label="Phóng to" onClick={() => void zoomIn()} className="flex size-10 items-center justify-center hover:bg-muted">
+            <Plus aria-hidden="true" className="size-5" />
           </button>
-          <button
-            type="button"
-            aria-label="Thu nhỏ"
-            onClick={() => void zoomOut()}
-            className="border-t border-border p-2 hover:bg-muted"
-          >
-            <Minus aria-hidden="true" className="size-4" />
+          <button type="button" aria-label="Thu nhỏ" onClick={() => void zoomOut()} className="flex size-10 items-center justify-center border-t border-border hover:bg-muted">
+            <Minus aria-hidden="true" className="size-5" />
           </button>
           <button
             type="button"
             aria-label="Vừa màn hình"
-            onClick={() => void fitView({ ...FIT_ALL, duration: 300 })}
-            className="border-t border-border p-2 hover:bg-muted"
+            onClick={() => void fitView({ ...FIT_OPTS, duration: 300 })}
+            className="flex size-10 items-center justify-center border-t border-border hover:bg-muted"
           >
-            <Maximize aria-hidden="true" className="size-4" />
+            <Maximize aria-hidden="true" className="size-5" />
           </button>
-          <span data-testid="zoom-level" className="border-t border-border px-1 py-1 text-center text-xs">
-            {Math.round(zoom * 100)}%
-          </span>
+          <ZoomLevel />
         </div>
-        {canFocusMe && (
+        {myFamily !== null && myMemberId !== null && (
           <Button variant="outline" onClick={() => focusMember(myMemberId)}>
             <UserRound aria-hidden="true" className="size-4" /> Về hồ sơ của tôi
           </Button>
         )}
-        <p className="hidden pb-2 text-sm text-muted-foreground md:block">
-          Kéo để di chuyển, cuộn để phóng to/thu nhỏ. Bấm vào thẻ để xem chi tiết.
-        </p>
       </div>
     </div>
   );
 }
 
-export function TreeView(props: Props) {
+export function TreeView(props: Props & { isAdmin: boolean }) {
   if (props.data.families.length === 0) {
-    return <p className="p-10 text-center text-muted-foreground">Chưa có ai trên cây gia phả.</p>;
+    return (
+      <div className="flex h-full items-center justify-center p-5">
+        <div className="flex max-w-md flex-col items-center gap-3 rounded-lg border border-border bg-card p-8 text-center shadow-(--shadow-card)">
+          <Network aria-hidden="true" className="size-10 text-accent" />
+          <p className="font-heading text-xl font-semibold">Chưa có ai trên cây gia phả.</p>
+          <p className="text-muted-foreground">
+            Cây tự dựng khi có thành viên. {props.isAdmin ? "Hãy thêm cụ tổ (đời 1) trước." : "Quản trị viên sẽ nhập dữ liệu gia phả."}
+          </p>
+          {props.isAdmin ? (
+            <Link href="/members/new" className={buttonVariants()}>
+              Thêm thành viên
+            </Link>
+          ) : (
+            <Link href="/members" className={buttonVariants({ variant: "outline" })}>
+              Xem danh sách thành viên
+            </Link>
+          )}
+        </div>
+      </div>
+    );
   }
   return (
     <ReactFlowProvider>
-      <TreeCanvas {...props} />
+      <TreeCanvas data={props.data} myMemberId={props.myMemberId} focusId={props.focusId} />
     </ReactFlowProvider>
   );
 }

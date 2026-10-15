@@ -193,6 +193,26 @@ describe("layoutTree — chiều cao theo nội dung", () => {
     expect(closed.bands).toHaveLength(1);
     expect(closed.families[0].y).toBe(open.families[0].y);
   });
+  it("thu gọn gốc A có con đời 2 thẻ cao → band đời 2 và khối đời 3 của B không đổi", () => {
+    // A (1) → 2 (đã khuất, thẻ cao); B (5) → 6 (thẻ thấp) → 7 (đời 3).
+    const two: TreeData = {
+      roots: [1, 5],
+      families: [
+        fam(1, 1, [2]),
+        fam(2, 2, [], [], { ...dead, birthYear: 1920 }),
+        fam(5, 1, [6]),
+        fam(6, 2, [7]),
+        fam(7, 3),
+      ],
+    };
+    const open = layoutTree(two, new Set());
+    const closed = layoutTree(two, new Set([1]));
+    expect(at(open, 2).cardHeight).toBeGreaterThan(at(open, 6).cardHeight);
+    expect(closed.families.some((f) => f.id === 2)).toBe(false);
+    expect(at(closed, 7).y).toBe(at(open, 7).y);
+    const band2 = (l: ReturnType<typeof layoutTree>) => l.bands.find((b) => b.generation === 2);
+    expect(band2(closed)).toEqual(band2(open));
+  });
 });
 
 describe("spouseRole", () => {

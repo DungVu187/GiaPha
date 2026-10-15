@@ -12,7 +12,7 @@ export default async function TreePage({ searchParams }: { searchParams: Promise
   return (
     <div data-testid="tree-frame" className="fixed inset-x-0 top-(--header-h) bottom-(--tabbar-h) bg-background">
       <h1 className="sr-only">Cây gia phả</h1>
-      <TreeView key={focus ?? "none"} data={data} myMemberId={user.memberId} focusId={focus} />
+      <TreeView key={focus ?? "none"} data={data} myMemberId={user.memberId} focusId={focus} isAdmin={user.role === "ADMIN"} />
     </div>
   );
 }
