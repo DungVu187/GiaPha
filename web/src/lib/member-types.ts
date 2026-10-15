@@ -47,3 +47,4 @@ export type MemberDetail = MemberSummary & {
   nextAnniversary: { date: { day: number; month: number; year: number }; daysLeft: number } | null;
   permissions: { canEdit: boolean; canDelete: boolean };
 };
+export type MemberStats = { memberCount: number; generations: number[] };

@@ -96,7 +96,7 @@ test("ngày sinh không đầy đủ: chỉ năm được; có ngày thiếu th�
 
 test("tìm không dấu", async ({ page }) => {
   await page.goto("/members");
-  await page.getByLabel("Tìm thành viên").fill("vu van chau");
+  await page.getByLabel("Tìm theo tên, tên bố hoặc tên mẹ").fill("vu van chau");
   await expect(page.getByRole("link", { name: /VŨ VĂN CHÁU/ })).toBeVisible();
 });
 
@@ -136,7 +136,7 @@ test("xóa: bị chặn khi còn con; xóa được người không có con", as
   await page.getByRole("button", { name: "Xóa", exact: true }).click();
   await page.getByRole("button", { name: "Xóa thành viên" }).click();
   await expect(page).toHaveURL(/\/members$/);
-  await page.getByLabel("Tìm thành viên").fill("vu van tam");
+  await page.getByLabel("Tìm theo tên, tên bố hoặc tên mẹ").fill("vu van tam");
   await expect(page.getByText("Không tìm thấy thành viên nào.")).toBeVisible();
 });
 
