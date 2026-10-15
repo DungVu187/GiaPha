@@ -51,7 +51,7 @@ test("tên đăng nhập đã có người dùng", async ({ page }) => {
 
 test("không ai trùng → tạo hồ sơ mới, vào trang chủ, sửa được hồ sơ của mình", async ({ page }) => {
   await fillRegister(page, { username: "reg_moi_e2e", fullName: "vũ thị mới", generation: "6", email: "Moi@Email.vn" });
-  await expect(page.getByRole("heading", { name: "Xin chào reg_moi_e2e" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Xin chào, VŨ THỊ MỚI/ })).toBeVisible();
   const id = await myMemberId(page);
   await page.goto(`/members/${id}`);
   await expect(page.getByRole("heading", { level: 1, name: "VŨ THỊ MỚI" })).toBeVisible();
@@ -77,7 +77,7 @@ test("trùng tên + đời → thấy 2 hồ sơ → Đây là tôi → nhận �
   await page.getByRole("button", { name: "Đăng ký" }).click();
 
   await page.getByRole("listitem").filter({ hasText: "VŨ ĐỨC THỊNH" }).getByRole("button", { name: "Đây là tôi" }).click();
-  await expect(page.getByRole("heading", { name: "Xin chào reg_dung1_e2e" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Xin chào, VŨ ĐỨC DŨNG/ })).toBeVisible();
   await page.goto(`/members/${await myMemberId(page)}`);
   await expect(page.getByText("VŨ ĐỨC THỊNH").first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Sửa thông tin" })).toBeVisible();
@@ -89,7 +89,7 @@ test("người thứ hai cùng tên + đời chỉ còn 1 hồ sơ → Tạo th�
   await expect(cards).toHaveCount(1);
   await expect(cards).toContainText("VŨ VĂN BÌNH");
   await page.getByRole("button", { name: "Tạo thành viên mới" }).click();
-  await expect(page.getByRole("heading", { name: "Xin chào reg_dung2_e2e" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Xin chào, VŨ ĐỨC DŨNG/ })).toBeVisible();
   const id = await myMemberId(page);
   const detail = await (await page.request.get(`/api/members/${id}`)).json();
   expect(detail).toMatchObject({ fullName: "VŨ ĐỨC DŨNG", generation: 5, fatherId: null });
