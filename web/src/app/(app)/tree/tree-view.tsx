@@ -23,6 +23,9 @@ const nodeTypes = { family: FamilyNode, band: Band };
 // "Vừa màn hình" chừa chỗ cho bảng tìm (trên) và nút zoom (dưới) — lỗi test thực tế: bảng tìm che khối gốc.
 const FIT_OPTS = { padding: { top: "96px", right: "24px", bottom: "96px", left: "80px" } } as const;
 const LABEL_H = 56;
+// Vùng nhãn đời không bị che: dưới bảng tìm (top 12 + cao ~58) và trên cụm nút zoom (bottom 12 + cao ~148).
+const SAFE_TOP = 80;
+const SAFE_BOTTOM = 170;
 
 function ZoomLevel() {
   const zoom = useStore((s) => s.transform[2]);
@@ -42,10 +45,11 @@ function BandLabels({ bands }: { bands: TreeLayout["bands"] }) {
       {bands.map((b) => {
         const top = b.y * zoom + ty;
         const bottom = top + b.height * zoom;
-        if (bottom < 0 || top > viewH) return null;
-        const y = Math.min(Math.max(top, 0), bottom - LABEL_H) + 8;
+        const y = Math.min(Math.max(top, SAFE_TOP), Math.min(bottom, viewH - SAFE_BOTTOM) - LABEL_H);
+        // Dải đời nằm hẳn trong vùng bị che (hoặc ngoài khung) → không vẽ nhãn.
+        if (top > viewH - SAFE_BOTTOM || y < SAFE_TOP) return null;
         return (
-          <div key={b.generation} data-band={b.generation} className="absolute left-2" style={{ top: y }}>
+          <div key={b.generation} data-band={b.generation} className="absolute left-2" style={{ top: y + 8 }}>
             <span className="block rounded-md bg-card/90 px-2 py-1 text-center font-heading leading-tight text-muted-foreground shadow-sm">
               Đời<span className="block text-2xl text-foreground">{b.generation}</span>
             </span>

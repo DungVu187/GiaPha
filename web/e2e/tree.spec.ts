@@ -171,6 +171,26 @@ test("mở trang ở zoom đọc được (≥ 60%), nhãn đời ghim mép trá
   await page.mouse.move(box.x + box.width / 2 - 300, box.y + box.height / 2, { steps: 5 });
   await page.mouse.up();
   expect((await label.boundingBox())!.x).toBeCloseTo(before, 0);
+
+  // Kéo lên để dải đời 3 tràn qua mép trên → nhãn vẫn nhìn thấy, không nằm dưới bảng tìm / cụm nút zoom.
+  const band = (await page.locator('.react-flow__node[data-id="band-3"]').boundingBox())!;
+  const dy = band.y - box.y + 40;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 - dy, { steps: 5 });
+  await page.mouse.up();
+  await expect.poll(async () => (await page.locator('.react-flow__node[data-id="band-3"]').boundingBox())!.y).toBeLessThan(box.y);
+  const searchBox = (await page.getByRole("region", { name: "Bảng tìm người" }).boundingBox())!;
+  expect((await label.boundingBox())!.y).toBeGreaterThanOrEqual(searchBox.y + searchBox.height);
+  // Lớp nhãn có pointer-events: none (để kéo xuyên qua) → bật tạm cho nhãn để elementFromPoint "thấy" nó.
+  const onTop = await label.evaluate((el) => {
+    (el as HTMLElement).style.pointerEvents = "auto";
+    const r = el.getBoundingClientRect();
+    const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+    (el as HTMLElement).style.pointerEvents = "";
+    return hit !== null && el.contains(hit);
+  });
+  expect(onTop).toBe(true);
 });
 
 test("thu nhỏ dưới 50% → thẻ chỉ còn tên; thẻ vợ/chồng ghi 'vợ của …'", async ({ page }) => {
