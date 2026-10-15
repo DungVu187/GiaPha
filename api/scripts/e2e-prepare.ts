@@ -2,6 +2,8 @@ import 'dotenv/config'; // không ghi đè DATABASE_URL/ADMIN_* do Playwright tr
 import { execSync } from 'node:child_process';
 import { hashPassword } from '../src/auth/password.js';
 import { seedAdmin } from '../src/auth/seed-admin.js';
+import { todayInVietnam } from '../src/lib/anniversary.js';
+import { jdFromDate, jdToDate, solarToLunar } from '../src/lib/lunar.js';
 import { normalizeFullName, toSearchName } from '../src/lib/name.js';
 import { createDb } from '../src/prisma/db.js';
 import { assertTestDatabaseUrl, resetDb } from '../test/helpers/db.js';
@@ -47,7 +49,45 @@ async function main() {
     const ong = await make('Vũ Văn Ông', 1);
     const bo = await make('Vũ Văn Bố', 2, ong.id);
     const toi = await make('Vũ Văn Tôi', 3, bo.id);
-    await make('Vũ Văn Bác', 2, ong.id);
+    const bac = await make('Vũ Văn Bác', 2, ong.id);
+
+    // Dữ liệu cho e2e lịch giỗ: ngày tính theo hôm nay (giờ VN) để chạy ngày nào cũng đúng.
+    const today = todayInVietnam();
+    const plus = (n: number) =>
+      jdToDate(jdFromDate(today.day, today.month, today.year) + n);
+    const deceased = (
+      name: string,
+      a: { day: number; month: number; calendar: 'SOLAR' | 'LUNAR' },
+    ) => {
+      const fullName = normalizeFullName(name);
+      return db.member.create({
+        data: {
+          fullName,
+          searchName: toSearchName(fullName),
+          generation: 3,
+          gender: 'MALE',
+          fatherId: bac.id,
+          isDeceased: true,
+          anniversaryDay: a.day,
+          anniversaryMonth: a.month,
+          anniversaryCalendar: a.calendar,
+        },
+      });
+    };
+    for (const [name, n] of [
+      ['Vũ Văn Giỗ Nay', 0],
+      ['Vũ Văn Giỗ Gần', 5],
+      ['Vũ Văn Giỗ Xa', 40],
+    ] as const) {
+      const d = plus(n);
+      await deceased(name, { day: d.day, month: d.month, calendar: 'SOLAR' });
+    }
+    const l = solarToLunar(plus(10));
+    await deceased('Vũ Văn Giỗ Âm', {
+      day: l.day,
+      month: l.month,
+      calendar: 'LUNAR',
+    });
 
     // Dữ liệu cho e2e cây: con gái có chồng ngoài họ và cháu ngoại (không vẽ trên cây).
     const gaiName = normalizeFullName('Vũ Thị Gái');

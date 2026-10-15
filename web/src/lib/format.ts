@@ -1,6 +1,6 @@
 import type { CalendarType, Gender, MemberDetail } from "./member-types";
 
-const pad2 = (n: number) => String(n).padStart(2, "0");
+export const pad2 = (n: number) => String(n).padStart(2, "0");
 
 export function formatPartialDate(d: { year: number | null; month: number | null; day: number | null }): string {
   if (d.year === null) return "";
