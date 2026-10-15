@@ -126,7 +126,10 @@ test("xóa: bị chặn khi còn con; xóa được người không có con", as
   await expect(
     page.getByRole("alert").filter({ hasText: "Không thể xóa: người này còn con trong gia phả. Hãy gỡ quan hệ con trước." }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Hủy" }).click();
+  const dialog = page.getByRole("alertdialog");
+  await expect(dialog.getByRole("button", { name: "Xóa thành viên" })).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Đóng" }).click();
+  await expect(dialog).toHaveCount(0);
 
   await page.goto("/members/new");
   await page.getByLabel("Họ và tên *").fill("vũ văn tạm");

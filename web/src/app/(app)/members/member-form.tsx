@@ -33,7 +33,7 @@ const ERROR_FOCUS: [string, string][] = [
   ["birthDate", "birth-day"],
   ["isDeceased", "status-alive"],
   ["deathDate", "death-day"],
-  ["deathCalendar", "deathCalendar-SOLAR"],
+  ["deathCalendar", "deathCalendar-LUNAR"],
   ["deathLunarLeap", "deathLunarLeap"],
   ["anniversary", "anniversary-day"],
   ["burialPlace", "burialPlace"],
@@ -390,8 +390,8 @@ export function MemberForm({
                 label="Theo lịch"
                 idPrefix="deathCalendar"
                 options={[
-                  { value: "SOLAR", label: "Dương lịch" },
                   { value: "LUNAR", label: "Âm lịch" },
+                  { value: "SOLAR", label: "Dương lịch" },
                 ]}
                 value={s.deathCalendar}
                 onChange={(c) => set("deathCalendar", c)}

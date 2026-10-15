@@ -58,8 +58,8 @@ export function RemoveSpouseButton({
         Gỡ
       </AlertDialog.Trigger>
       <AlertDialog.Portal>
-        <AlertDialog.Backdrop className="fixed inset-0 bg-foreground/40" />
-        <AlertDialog.Popup className="fixed top-1/2 left-1/2 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-xl bg-card p-6 shadow-(--shadow-card)">
+        <AlertDialog.Backdrop className="fixed inset-0 z-50 bg-foreground/40" />
+        <AlertDialog.Popup className="fixed top-1/2 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-xl bg-card p-6 shadow-(--shadow-card)">
           <AlertDialog.Title className="font-heading text-xl font-semibold">
             Gỡ quan hệ vợ chồng giữa {fullName} và {spouseName}?
           </AlertDialog.Title>
@@ -71,7 +71,7 @@ export function RemoveSpouseButton({
           )}
           <div className="flex justify-end gap-3">
             <AlertDialog.Close render={<Button variant="outline" />}>Hủy</AlertDialog.Close>
-            <Button variant="destructive" onClick={remove} disabled={busy}>
+            <Button variant="danger" onClick={remove} disabled={busy}>
               Gỡ quan hệ
             </Button>
           </div>

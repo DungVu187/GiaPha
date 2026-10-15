@@ -10,6 +10,7 @@ export function DeleteButton({ id, fullName }: { id: number; fullName: string })
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [blocked, setBlocked] = useState(false);
 
   async function remove() {
     setBusy(true);
@@ -22,6 +23,7 @@ export function DeleteButton({ id, fullName }: { id: number; fullName: string })
         return;
       }
       const body = (await res.json().catch(() => null)) as { message?: unknown } | null;
+      if (res.status === 409) setBlocked(true);
       setError(
         (res.status === 409 || res.status === 403) && typeof body?.message === "string"
           ? body.message
@@ -39,13 +41,16 @@ export function DeleteButton({ id, fullName }: { id: number; fullName: string })
       open={open}
       onOpenChange={(o) => {
         setOpen(o);
-        if (!o) setError(null);
+        if (!o) {
+          setError(null);
+          setBlocked(false);
+        }
       }}
     >
       <AlertDialog.Trigger render={<Button variant="destructive" />}>Xóa</AlertDialog.Trigger>
       <AlertDialog.Portal>
-        <AlertDialog.Backdrop className="fixed inset-0 bg-foreground/40" />
-        <AlertDialog.Popup className="fixed top-1/2 left-1/2 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-xl bg-card p-6 shadow-(--shadow-card)">
+        <AlertDialog.Backdrop className="fixed inset-0 z-50 bg-foreground/40" />
+        <AlertDialog.Popup className="fixed top-1/2 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-xl bg-card p-6 shadow-(--shadow-card)">
           <AlertDialog.Title className="font-heading text-xl font-semibold">Xóa {fullName}?</AlertDialog.Title>
           <AlertDialog.Description>Thao tác này không hoàn tác được.</AlertDialog.Description>
           {error && (
@@ -54,10 +59,12 @@ export function DeleteButton({ id, fullName }: { id: number; fullName: string })
             </p>
           )}
           <div className="flex justify-end gap-3">
-            <AlertDialog.Close render={<Button variant="outline" />}>Hủy</AlertDialog.Close>
-            <Button variant="destructive" onClick={remove} disabled={busy}>
-              Xóa thành viên
-            </Button>
+            <AlertDialog.Close render={<Button variant="outline" />}>{blocked ? "Đóng" : "Hủy"}</AlertDialog.Close>
+            {!blocked && (
+              <Button variant="danger" onClick={remove} disabled={busy}>
+                {busy ? "Đang xóa…" : "Xóa thành viên"}
+              </Button>
+            )}
           </div>
         </AlertDialog.Popup>
       </AlertDialog.Portal>
