@@ -8,18 +8,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { CARD_H, ROW_H, ancestorFamilyIds, familyIdOf, layoutTree, searchTree } from "@/lib/tree-layout";
+import { ancestorFamilyIds, familyIdOf, layoutTree, searchTree } from "@/lib/tree-layout";
 import type { TreeData } from "@/lib/tree-types";
 import { FamilyNode, type FamilyFlowNode } from "./family-node";
 
-type BandNode = Node<{ generation: number; width: number }, "band">;
+type BandNode = Node<{ generation: number; width: number; height: number }, "band">;
 
 function Band({ data }: NodeProps<BandNode>) {
   return (
     <div
       data-band={data.generation}
       className={cn("flex items-start border-t border-border/60 pt-3 pl-4", data.generation % 2 === 1 && "bg-secondary/40")}
-      style={{ width: data.width, height: ROW_H }}
+      style={{ width: data.width, height: data.height }}
     >
       <span className="font-heading text-muted-foreground">
         Đời <span className="block text-3xl leading-none text-foreground">{data.generation}</span>
@@ -70,7 +70,7 @@ function TreeCanvas({ data, myMemberId, focusId }: Props) {
     const laid = layoutTree(data, next).families.find((f) => f.id === fid);
     setCollapsed(next);
     setHighlightId(memberId);
-    if (laid) void setCenter(laid.x + laid.width / 2, laid.y + CARD_H / 2, { zoom: 1, duration: 400 });
+    if (laid) void setCenter(laid.x + laid.width / 2, laid.y + laid.height / 2, { zoom: 1, duration: 400 });
   }
 
   const nodes = useMemo<(FamilyFlowNode | BandNode)[]>(
@@ -78,8 +78,8 @@ function TreeCanvas({ data, myMemberId, focusId }: Props) {
       ...layout.bands.map<BandNode>((b) => ({
         id: `band-${b.generation}`,
         type: "band",
-        position: { x: 0, y: b.y - 20 },
-        data: { generation: b.generation, width: layout.width },
+        position: { x: 0, y: b.y },
+        data: { generation: b.generation, width: layout.width, height: b.height },
         draggable: false,
         selectable: false,
         focusable: false,

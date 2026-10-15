@@ -5,7 +5,7 @@ import Link from "next/link";
 import { MemberAvatar } from "@/components/member-avatar";
 import { cn } from "@/lib/utils";
 import { formatAnniversaryShort, formatPartialDate } from "@/lib/format";
-import { CARD_GAP, CARD_H, CARD_W, FAMILY_PAD, type LaidFamily } from "@/lib/tree-layout";
+import { CARD_GAP, CARD_W, FAMILY_PAD, type LaidFamily } from "@/lib/tree-layout";
 import type { TreeCard, TreeFamily } from "@/lib/tree-types";
 
 export type FamilyNodeData = {
@@ -16,7 +16,7 @@ export type FamilyNodeData = {
 };
 export type FamilyFlowNode = Node<FamilyNodeData, "family">;
 
-function Card({ c, kind, highlight }: { c: TreeCard; kind: "lineage" | "spouse"; highlight: boolean }) {
+function Card({ c, kind, highlight, height }: { c: TreeCard; kind: "lineage" | "spouse"; highlight: boolean; height: number }) {
   const birth = formatPartialDate({ year: c.birthYear, month: c.birthMonth, day: c.birthDay });
   const death = formatPartialDate({ year: c.deathYear, month: c.deathMonth, day: c.deathDay });
   const anniversary =
@@ -29,7 +29,7 @@ function Card({ c, kind, highlight }: { c: TreeCard; kind: "lineage" | "spouse";
       data-member-id={c.id}
       data-kind={kind}
       data-highlight={highlight}
-      style={{ width: CARD_W, minHeight: CARD_H - 24 }}
+      style={{ width: CARD_W, height }}
       className={cn(
         "flex flex-col items-center gap-1 rounded-md border border-t-4 border-border px-3 py-3 text-center text-xs shadow-sm transition-shadow hover:shadow-md focus-visible:outline-2 focus-visible:outline-ring",
         kind === "lineage" ? "border-t-primary" : "border-t-accent",
@@ -60,9 +60,9 @@ export function FamilyNode({ data }: NodeProps<FamilyFlowNode>) {
     <div className="relative rounded-lg bg-secondary" style={{ width: laid.width, padding: FAMILY_PAD }}>
       <Handle type="target" position={Position.Top} className="!opacity-0" isConnectable={false} />
       <div className="flex" style={{ gap: CARD_GAP }}>
-        <Card c={family.person} kind="lineage" highlight={highlightId === family.person.id} />
+        <Card c={family.person} kind="lineage" highlight={highlightId === family.person.id} height={laid.cardHeight} />
         {family.spouses.map((s) => (
-          <Card key={s.id} c={s} kind="spouse" highlight={highlightId === s.id} />
+          <Card key={s.id} c={s} kind="spouse" highlight={highlightId === s.id} height={laid.cardHeight} />
         ))}
       </div>
       {laid.hasChildren && (

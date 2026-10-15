@@ -1,21 +1,59 @@
 import { toSearchName } from "./name";
-import type { TreeData, TreeFamily } from "./tree-types";
+import type { TreeCard, TreeData, TreeFamily } from "./tree-types";
 
-export const CARD_W = 176;
-export const CARD_H = 200;
+// Kích thước thẻ — family-node.tsx vẽ đúng theo các số này (xem Task 7 GĐ5).
+export const CARD_W = 184;
+export const CARD_PAD = 30; // viền trên 4 + viền dưới 1 + đệm 12×2, dư 1
+export const AVATAR_H = 40;
+export const NAME_H = 44; // tên 17px/22px, giữ chỗ 2 dòng
+export const GEN_H = 22; // dòng "Đời N" (+ ĐÃ KHUẤT)
+export const LINE_H = 18; // dòng phụ 13px/18px, 1 dòng
+export const ITEM_GAP = 4;
 export const CARD_GAP = 12;
 export const FAMILY_PAD = 8;
 export const SIBLING_GAP = 32;
 export const TREE_GAP = 120;
-export const ROW_H = 300;
-export const TOP = 40;
+export const ROW_GAP = 96; // giữa hai đời: chỗ cho nút Thu gọn (cao 40) + đường nối
+export const TOP = 60;
 export const LEFT = 140;
+export const READABLE_ZOOM = 0.6;
 
-export type LaidFamily = { id: number; x: number; y: number; width: number; collapsed: boolean; hasChildren: boolean; hiddenCount: number };
+export function cardLines(c: TreeCard, isSpouse: boolean): number {
+  let n = isSpouse ? 1 : 0; // "vợ của …"
+  if (c.birthYear !== null) n++;
+  if (c.isDeceased) {
+    if (c.deathYear !== null) n++;
+    if (c.anniversaryDay !== null && c.anniversaryMonth !== null && c.anniversaryCalendar !== null) n++;
+    if (c.burialPlace) n++;
+  }
+  return n;
+}
+
+export const cardHeight = (c: TreeCard, isSpouse: boolean) =>
+  CARD_PAD + AVATAR_H + ITEM_GAP + NAME_H + ITEM_GAP + GEN_H + cardLines(c, isSpouse) * (ITEM_GAP + LINE_H);
+
+export const familyCardHeight = (f: TreeFamily) =>
+  Math.max(cardHeight(f.person, false), ...f.spouses.map((s) => cardHeight(s, true)));
+
+const familyHeight = (f: TreeFamily) => familyCardHeight(f) + FAMILY_PAD * 2;
+
+export const spouseRole = (g: "MALE" | "FEMALE" | null) => (g === "FEMALE" ? "vợ" : g === "MALE" ? "chồng" : "vợ/chồng");
+
+export type LaidFamily = {
+  id: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  cardHeight: number;
+  collapsed: boolean;
+  hasChildren: boolean;
+  hiddenCount: number;
+};
 export type TreeLayout = {
   families: LaidFamily[];
   edges: { from: number; to: number }[];
-  bands: { generation: number; y: number }[];
+  bands: { generation: number; y: number; height: number }[];
   width: number;
   height: number;
 };
@@ -23,7 +61,15 @@ export type TreeLayout = {
 export const familyWidth = (f: TreeFamily) =>
   (1 + f.spouses.length) * CARD_W + f.spouses.length * CARD_GAP + FAMILY_PAD * 2;
 
-const indexById = (data: TreeData) => new Map(data.families.map((f) => [f.id, f]));
+export const indexById = (data: TreeData) => new Map(data.families.map((f) => [f.id, f]));
+
+/** Số người bị ẩn khi thu gọn f: mọi con cháu trong dòng + vợ/chồng của họ. */
+export function descendantCount(byId: ReadonlyMap<number, TreeFamily>, f: TreeFamily): number {
+  return f.childIds.reduce((sum, id) => {
+    const c = byId.get(id);
+    return c ? sum + 1 + c.spouses.length + descendantCount(byId, c) : sum;
+  }, 0);
+}
 
 export function layoutTree(data: TreeData, collapsed: ReadonlySet<number>): TreeLayout {
   if (data.families.length === 0) return { families: [], edges: [], bands: [], width: 0, height: 0 };
@@ -41,11 +87,15 @@ export function layoutTree(data: TreeData, collapsed: ReadonlySet<number>): Tree
     return w;
   };
 
-  const countHidden = (f: TreeFamily): number =>
-    f.childIds.reduce((sum, id) => {
-      const c = byId.get(id);
-      return c ? sum + 1 + c.spouses.length + countHidden(c) : sum;
-    }, 0);
+  // Mỗi đời cao bằng khối cao nhất của đời đó — tính trên MỌI khối (kể cả đang bị thu gọn) để thu/mở không làm dải đời nhảy.
+  const maxGen = Math.max(...data.families.map((f) => f.generation));
+  const rowH = new Map<number, number>();
+  for (const f of data.families) rowH.set(f.generation, Math.max(rowH.get(f.generation) ?? 0, familyHeight(f)));
+  const rowY = new Map<number, number>();
+  for (let g = minGen, y = TOP; g <= maxGen; g++) {
+    rowY.set(g, y);
+    y += (rowH.get(g) ?? 0) + ROW_GAP;
+  }
 
   const families: LaidFamily[] = [];
   const edges: { from: number; to: number }[] = [];
@@ -56,11 +106,13 @@ export function layoutTree(data: TreeData, collapsed: ReadonlySet<number>): Tree
     families.push({
       id: f.id,
       x: left + (w - fw) / 2,
-      y: TOP + (f.generation - minGen) * ROW_H,
+      y: rowY.get(f.generation)!,
       width: fw,
+      height: familyHeight(f),
+      cardHeight: familyCardHeight(f),
       collapsed: isCollapsed,
       hasChildren: f.childIds.length > 0,
-      hiddenCount: isCollapsed ? countHidden(f) : 0,
+      hiddenCount: isCollapsed ? descendantCount(byId, f) : 0,
     });
     const cs = kids(f);
     const childSpan = cs.reduce((sum, c) => sum + span.get(c.id)!, 0) + Math.max(0, cs.length - 1) * SIBLING_GAP;
@@ -83,13 +135,17 @@ export function layoutTree(data: TreeData, collapsed: ReadonlySet<number>): Tree
 
   const bandGens = [...new Set(families.map((f) => byId.get(f.id)!.generation))].sort((a, b) => a - b);
   const right = Math.max(...families.map((f) => f.x + f.width));
-  const bottom = Math.max(...families.map((f) => f.y));
+  const bottom = Math.max(...families.map((f) => f.y + f.height));
   return {
     families,
     edges,
-    bands: bandGens.map((generation) => ({ generation, y: TOP + (generation - minGen) * ROW_H })),
+    bands: bandGens.map((generation) => ({
+      generation,
+      y: rowY.get(generation)! - ROW_GAP / 2,
+      height: rowH.get(generation)! + ROW_GAP,
+    })),
     width: right + LEFT,
-    height: bottom + CARD_H + TOP,
+    height: bottom + TOP,
   };
 }
 
@@ -111,8 +167,6 @@ export function ancestorFamilyIds(data: TreeData, familyId: number): number[] {
 }
 
 export type TreeHit = { memberId: number; familyId: number; fullName: string; generation: number; subtitle: string };
-
-const spouseOf = (g: "MALE" | "FEMALE" | null) => (g === "FEMALE" ? "vợ" : g === "MALE" ? "chồng" : "vợ/chồng");
 
 export function searchTree(data: TreeData, query: string): TreeHit[] {
   const q = toSearchName(query);
@@ -138,11 +192,31 @@ export function searchTree(data: TreeData, query: string): TreeHit[] {
         familyId: f.id,
         fullName: s.fullName,
         generation: s.generation,
-        subtitle: `${spouseOf(s.gender)} của ${f.person.fullName}`,
+        subtitle: `${spouseRole(s.gender)} của ${f.person.fullName}`,
       });
     }
   }
   return [...hits.values()].sort(
     (a, b) => a.generation - b.generation || a.fullName.localeCompare(b.fullName, "vi") || a.memberId - b.memberId,
   );
+}
+
+export type InitialView = { kind: "fit" } | { kind: "center"; x: number; y: number };
+
+/**
+ * Điểm mở trang cây (P7): focus từ URL → căn người đó; cây đủ nhỏ để "vừa màn hình" ở zoom ≥ 60% → vừa màn hình;
+ * còn lại căn khối của mình (homeFamilyId) hoặc gốc đầu tiên, zoom 100%. Layout không rỗng.
+ */
+export function initialView(
+  layout: TreeLayout,
+  opts: { focusFamilyId: number | null; homeFamilyId: number | null; viewport: { width: number; height: number } },
+): InitialView {
+  const center = (id: number | null): InitialView => {
+    const f = layout.families.find((x) => x.id === id) ?? layout.families[0];
+    return { kind: "center", x: f.x + f.width / 2, y: f.y + f.height / 2 };
+  };
+  if (opts.focusFamilyId !== null) return center(opts.focusFamilyId);
+  const fit = Math.min(opts.viewport.width / layout.width, opts.viewport.height / layout.height);
+  if (fit >= READABLE_ZOOM) return { kind: "fit" };
+  return center(opts.homeFamilyId);
 }
