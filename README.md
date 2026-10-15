@@ -15,8 +15,13 @@ Website gia phả cho dòng họ Vũ: quản lý thành viên theo đời, quan 
 - Tìm thành viên theo tên, gõ không dấu được.
 - Tự đăng ký tài khoản; nếu gia phả đã có người trùng họ tên + đời chưa có tài khoản thì chọn "Đây là tôi" để nhận hồ sơ, hoặc tạo hồ sơ mới.
 - Cây gia phả tự dựng theo đời: phóng to/thu nhỏ, kéo, thu gọn/mở nhánh, tìm người trên cây, bấm thẻ xem chi tiết; chỉ vẽ người trong dòng (theo dòng cha) và vợ/chồng.
+- Danh sách thành viên nhóm theo đời: lọc theo đời, một ô tìm khớp tên người hoặc tên bố/mẹ (gõ không dấu được).
+- Lịch giỗ: 30 ngày tới / 12 tháng tới, nhóm theo tháng, "Còn N ngày", hôm nay kèm ngày âm lịch và năm can chi.
+- Trang chủ: lời chào theo hồ sơ, giỗ 30 ngày tới, ô tìm, lối tắt.
+- Cây gia phả dễ xem trên điện thoại: mở ở mức chữ đọc được, thu nhỏ thì thẻ chỉ còn tên, chế độ "dạng danh sách theo nhánh".
+- Giao diện điện thoại có thanh tab đáy và menu ngăn kéo; tablet có header một hàng.
 
-Đang làm: danh sách theo đời và lịch giỗ, trang quản trị, triển khai VPS.
+Đang làm: tài khoản của tôi, quên mật khẩu, trang quản trị, triển khai VPS.
 
 ## Công nghệ
 
