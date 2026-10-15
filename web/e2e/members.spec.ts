@@ -167,3 +167,27 @@ test("form chặn chọn con cháu của mình làm bố", async ({ page }) => {
   await page.getByRole("button", { name: "Lưu thành viên" }).click();
   await expect(page.getByRole("alert").filter({ hasText: "Không thể chọn con cháu của mình làm bố." })).toBeVisible();
 });
+
+test("điện thoại: hộp thoại Thêm con không bị thanh tab đáy đè", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await page.goto(`/members/${await memberIdByName(page, "Vũ Văn Bố")}`);
+  await page.getByRole("button", { name: "Thêm con" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("tab", { name: "Tạo người mới" }).click();
+  await dialog.getByLabel("Họ và tên *").fill("vũ văn thử");
+  const add = dialog.getByRole("button", { name: "Thêm", exact: true });
+  await add.scrollIntoViewIfNeeded();
+  // Cả khung hộp thoại (đáy popup) và nút Thêm đều phải là phần tử trên cùng tại điểm của chúng.
+  const bottomOk = await dialog.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    const top = document.elementFromPoint(r.x + r.width / 2, r.bottom - 4);
+    return r.bottom <= innerHeight && !!top && el.contains(top);
+  });
+  expect(bottomOk).toBe(true);
+  const ok = await add.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+    return r.bottom <= innerHeight && (top === el || el.contains(top));
+  });
+  expect(ok).toBe(true);
+});

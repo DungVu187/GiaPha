@@ -186,8 +186,8 @@ export function RelativeDialog({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Trigger render={<Button variant="outline" />}>{title}</Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 bg-foreground/40" />
-        <Dialog.Popup className="fixed top-1/2 left-1/2 flex max-h-[90vh] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col gap-5 overflow-y-auto rounded-xl bg-card p-6 shadow-(--shadow-card)">
+        <Dialog.Backdrop className="fixed inset-0 z-50 bg-foreground/40" />
+        <Dialog.Popup className="fixed top-1/2 z-50 left-1/2 flex max-h-[90vh] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col gap-5 overflow-y-auto rounded-xl bg-card p-6 shadow-(--shadow-card)">
           <Dialog.Title className="font-heading text-xl font-semibold">{title}</Dialog.Title>
           {canPickExisting ? (
             <Tabs.Root value={tab} onValueChange={(v) => setTab(v as Tab)} className="flex flex-col gap-5">
