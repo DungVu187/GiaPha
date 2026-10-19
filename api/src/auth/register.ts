@@ -135,6 +135,7 @@ export async function register(
           passwordHash,
           email: input.email,
           memberId,
+          claimedAt: claim.kind === 'MEMBER' ? new Date() : null,
         },
         select: { id: true, username: true, role: true, memberId: true },
       });

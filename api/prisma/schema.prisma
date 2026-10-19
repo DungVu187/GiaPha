@@ -24,16 +24,18 @@ enum CalendarType {
 }
 
 model User {
-  id           Int       @id @default(autoincrement())
-  username     String    @unique
+  id           Int                  @id @default(autoincrement())
+  username     String               @unique
   passwordHash String
-  email        String?   @unique
-  role         Role      @default(MEMBER)
-  memberId     Int?      @unique // một thành viên tối đa một tài khoản
-  member       Member?   @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  email        String?              @unique
+  role         Role                 @default(MEMBER)
+  memberId     Int?                 @unique // một thành viên tối đa một tài khoản
+  member       Member?              @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  claimedAt    DateTime? // lúc nhận hồ sơ có sẵn bằng "Đây là tôi" — admin rà soát (GĐ6)
+  resetTokens  PasswordResetToken[]
   sessions     Session[]
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
 }
 
 model Session {
@@ -98,4 +100,14 @@ model Marriage {
 
   @@unique([person1Id, person2Id])
   @@index([person2Id])
+}
+
+model PasswordResetToken {
+  id        String   @id // SHA-256 hex của token trong link email
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }

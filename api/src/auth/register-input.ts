@@ -1,6 +1,6 @@
 import { normalizeFullName } from '../lib/name.js';
 import { MAX_GENERATION } from '../members/member-input.js';
-import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from './password.js';
+import { newPasswordError, parseOptionalEmail } from './credentials.js';
 import { isValidUsername, normalizeUsername } from './username.js';
 
 export type RegisterClaim =
@@ -23,8 +23,6 @@ export const USERNAME_TAKEN = 'Tên đăng nhập đã có người dùng.';
 export const EMAIL_TAKEN = 'Email này đã được dùng cho tài khoản khác.';
 
 const MAX_FULL_NAME_LENGTH = 100;
-const MAX_EMAIL_LENGTH = 254;
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_INT32 = 2147483647;
 
 const isMissing = (v: unknown) => v === undefined || v === null;
@@ -44,13 +42,8 @@ export function parseRegisterInput(
   else if (!isValidUsername(username)) errors.username = USERNAME_RULE;
 
   const password = typeof raw.password === 'string' ? raw.password : '';
-  // Tối thiểu đo theo NFC (cùng dạng lúc băm); tối đa đo trên chuỗi thô (khớp parseCredentials của login).
-  const passwordLength = password.normalize('NFC').length;
-  if (!password) errors.password = 'Vui lòng nhập mật khẩu.';
-  else if (passwordLength < MIN_PASSWORD_LENGTH)
-    errors.password = `Mật khẩu phải có ít nhất ${MIN_PASSWORD_LENGTH} ký tự.`;
-  else if (password.length > MAX_PASSWORD_LENGTH)
-    errors.password = `Mật khẩu tối đa ${MAX_PASSWORD_LENGTH} ký tự.`;
+  const passwordError = newPasswordError(raw.password);
+  if (passwordError) errors.password = passwordError;
 
   const fullName =
     typeof raw.fullName === 'string' ? normalizeFullName(raw.fullName) : '';
@@ -68,16 +61,9 @@ export function parseRegisterInput(
   )
     errors.generation = `Đời phải là số nguyên từ 1 đến ${MAX_GENERATION}.`;
 
-  let email: string | null = null;
-  if (!isMissing(raw.email)) {
-    if (typeof raw.email !== 'string') errors.email = 'Email không hợp lệ.';
-    else {
-      const e = raw.email.trim().toLowerCase();
-      if (e && (e.length > MAX_EMAIL_LENGTH || !EMAIL_PATTERN.test(e)))
-        errors.email = 'Email không hợp lệ.';
-      else email = e || null;
-    }
-  }
+  const parsedEmail = parseOptionalEmail(raw.email);
+  if (!parsedEmail.ok) errors.email = parsedEmail.error;
+  const email = parsedEmail.ok ? parsedEmail.email : null;
 
   let claim: RegisterClaim = { kind: 'NONE' };
   if (!isMissing(raw.claim)) {

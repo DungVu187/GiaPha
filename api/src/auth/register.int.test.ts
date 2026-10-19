@@ -357,3 +357,40 @@ describe('register', () => {
     ).toBe(true);
   });
 });
+
+describe('register — claimedAt (GĐ6 rà soát hồ sơ được nhận)', () => {
+  it('nhận hồ sơ có sẵn ("Đây là tôi") → claimedAt ≈ bây giờ', async () => {
+    const { dung1 } = await seedDung();
+    const before = Date.now();
+    const r = await register(
+      db,
+      input({ claim: { kind: 'MEMBER', memberId: dung1.id } }),
+    );
+    expect(r.kind).toBe('created');
+    if (r.kind !== 'created') return;
+    const u = await db.user.findUniqueOrThrow({ where: { id: r.user.id } });
+    expect(u.memberId).toBe(dung1.id);
+    expect(u.claimedAt).not.toBeNull();
+    expect(u.claimedAt!.getTime()).toBeGreaterThanOrEqual(before - 1000);
+    expect(u.claimedAt!.getTime()).toBeLessThanOrEqual(Date.now() + 1000);
+  });
+  it('tạo hồ sơ mới (NEW hoặc không trùng) → claimedAt null', async () => {
+    await seedDung();
+    const r = await register(db, input({ claim: { kind: 'NEW' } }));
+    expect(r.kind).toBe('created');
+    if (r.kind !== 'created') return;
+    expect(
+      (await db.user.findUniqueOrThrow({ where: { id: r.user.id } })).claimedAt,
+    ).toBeNull();
+    const r2 = await register(
+      db,
+      input({ username: 'nguoimoi', fullName: 'LÊ VĂN MỚI', generation: 2 }),
+    );
+    expect(r2.kind).toBe('created');
+    if (r2.kind !== 'created') return;
+    expect(
+      (await db.user.findUniqueOrThrow({ where: { id: r2.user.id } }))
+        .claimedAt,
+    ).toBeNull();
+  });
+});
