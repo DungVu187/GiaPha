@@ -43,18 +43,50 @@ export async function getAccount(db: Db, userId: number): Promise<AccountInfo> {
 
 type Errors = Record<string, string>;
 
+const CURRENT_PASSWORD_MISSING = 'Vui lòng nhập mật khẩu hiện tại.';
+const CURRENT_PASSWORD_WRONG = 'Mật khẩu hiện tại không đúng.';
+
+const hasCurrentPassword = (raw: unknown): raw is string =>
+  typeof raw === 'string' && raw.length > 0;
+
+/** Lỗi mật khẩu hiện tại (đã qua `hasCurrentPassword`), hoặc null nếu đúng. */
+async function verifyCurrentPassword(
+  db: Db,
+  userId: number,
+  currentPassword: string,
+): Promise<string | null> {
+  // Chặn chuỗi khổng lồ trước argon2 như login.
+  if (currentPassword.length > MAX_PASSWORD_LENGTH)
+    return CURRENT_PASSWORD_WRONG;
+  const user = await db.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { passwordHash: true },
+  });
+  return (await verifyPassword(user.passwordHash, currentPassword))
+    ? null
+    : CURRENT_PASSWORD_WRONG;
+}
+
+/** Đổi email của chính mình (cần mật khẩu hiện tại); xong thì hủy mọi link đặt lại mật khẩu. */
 export async function updateEmail(
   db: Db,
   userId: number,
-  raw: unknown,
+  body: { email?: unknown; currentPassword?: unknown },
 ): Promise<{ ok: true; email: string | null } | { ok: false; errors: Errors }> {
-  const parsed = parseOptionalEmail(raw);
-  if (!parsed.ok) return { ok: false, errors: { email: parsed.error } };
+  const errors: Errors = {};
+  const parsed = parseOptionalEmail(body.email);
+  if (!parsed.ok) errors.email = parsed.error;
+  const current = body.currentPassword;
+  if (!hasCurrentPassword(current))
+    errors.currentPassword = CURRENT_PASSWORD_MISSING;
+  if (!parsed.ok || !hasCurrentPassword(current)) return { ok: false, errors };
+  const wrong = await verifyCurrentPassword(db, userId, current);
+  if (wrong) return { ok: false, errors: { currentPassword: wrong } };
   try {
-    await db.user.update({
-      where: { id: userId },
-      data: { email: parsed.email },
-    });
+    await db.$transaction([
+      db.user.update({ where: { id: userId }, data: { email: parsed.email } }),
+      db.passwordResetToken.deleteMany({ where: { userId } }),
+    ]);
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -66,7 +98,7 @@ export async function updateEmail(
   return { ok: true, email: parsed.email };
 }
 
-/** Đổi mật khẩu của chính mình; xong thì xóa mọi phiên KHÁC (giữ phiên `currentToken`). */
+/** Đổi mật khẩu của chính mình; xong thì xóa mọi phiên KHÁC (giữ phiên `currentToken`) và mọi link đặt lại. */
 export async function changePassword(
   db: Db,
   userId: number,
@@ -75,27 +107,15 @@ export async function changePassword(
 ): Promise<{ ok: true } | { ok: false; errors: Errors }> {
   const errors: Errors = {};
   const current = body.currentPassword;
-  if (typeof current !== 'string' || !current)
-    errors.currentPassword = 'Vui lòng nhập mật khẩu hiện tại.';
+  if (!hasCurrentPassword(current))
+    errors.currentPassword = CURRENT_PASSWORD_MISSING;
   const newError = newPasswordError(body.newPassword);
   if (newError) errors.newPassword = newError;
-  if (Object.keys(errors).length > 0) return { ok: false, errors };
-  const currentPassword = current as string;
+  if (!hasCurrentPassword(current) || newError) return { ok: false, errors };
   const next = body.newPassword as string;
-  const user = await db.user.findUniqueOrThrow({
-    where: { id: userId },
-    select: { passwordHash: true },
-  });
-  // Chặn chuỗi khổng lồ trước argon2 như login.
-  if (
-    currentPassword.length > MAX_PASSWORD_LENGTH ||
-    !(await verifyPassword(user.passwordHash, currentPassword))
-  )
-    return {
-      ok: false,
-      errors: { currentPassword: 'Mật khẩu hiện tại không đúng.' },
-    };
-  if (next.normalize('NFC') === currentPassword.normalize('NFC'))
+  const wrong = await verifyCurrentPassword(db, userId, current);
+  if (wrong) return { ok: false, errors: { currentPassword: wrong } };
+  if (next.normalize('NFC') === current.normalize('NFC'))
     return {
       ok: false,
       errors: { newPassword: 'Mật khẩu mới phải khác mật khẩu hiện tại.' },
@@ -106,6 +126,7 @@ export async function changePassword(
     db.session.deleteMany({
       where: { userId, id: { not: hashToken(currentToken) } },
     }),
+    db.passwordResetToken.deleteMany({ where: { userId } }),
   ]);
   return { ok: true };
 }

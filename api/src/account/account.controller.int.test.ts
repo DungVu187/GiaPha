@@ -16,12 +16,13 @@ async function userWithSession(
     memberId?: number | null;
     email?: string | null;
     username?: string;
+    password?: string;
   } = {},
 ) {
   const user = await db.user.create({
     data: {
       username: opts.username ?? `u_${Math.random().toString(36).slice(2, 10)}`,
-      passwordHash: await hashPassword(PASS),
+      passwordHash: await hashPassword(opts.password ?? PASS),
       role: opts.role ?? 'MEMBER',
       memberId: opts.memberId ?? null,
       email: opts.email ?? null,
@@ -42,7 +43,11 @@ describe('/api/account', () => {
   it('chưa đăng nhập → 401 cả ba route', async () => {
     expect((await http().get('/api/account')).status).toBe(401);
     expect(
-      (await http().put('/api/account/email').send({ email: 'a@b.cd' })).status,
+      (
+        await http()
+          .put('/api/account/email')
+          .send({ email: 'a@b.cd', currentPassword: PASS })
+      ).status,
     ).toBe(401);
     expect(
       (
@@ -75,6 +80,10 @@ describe('/api/account', () => {
     const admin = await userWithSession({ role: 'ADMIN' });
     const a = await http().get('/api/account').set('Cookie', admin.cookie);
     expect(a.body).toMatchObject({ role: 'ADMIN', member: null, email: null });
+    const unlinked = await userWithSession();
+    const u = await http().get('/api/account').set('Cookie', unlinked.cookie);
+    expect(u.status).toBe(200);
+    expect(u.body).toMatchObject({ role: 'MEMBER', member: null });
   });
 
   it.each([
@@ -89,7 +98,7 @@ describe('/api/account', () => {
       const set = await http()
         .put('/api/account/email')
         .set('Cookie', u.cookie)
-        .send({ email: ' Dung.Vu@Gmail.com ' });
+        .send({ email: ' Dung.Vu@Gmail.com ', currentPassword: PASS });
       expect(set.status).toBe(200);
       expect(set.body).toEqual({ email: 'dung.vu@gmail.com' });
       expect(
@@ -100,7 +109,7 @@ describe('/api/account', () => {
           await http()
             .put('/api/account/email')
             .set('Cookie', u.cookie)
-            .send({ email: '' })
+            .send({ email: '', currentPassword: PASS })
         ).body,
       ).toEqual({ email: null });
       expect(
@@ -108,7 +117,7 @@ describe('/api/account', () => {
           await http()
             .put('/api/account/email')
             .set('Cookie', u.cookie)
-            .send({ email: null })
+            .send({ email: null, currentPassword: PASS })
         ).body,
       ).toEqual({ email: null });
     },
@@ -121,14 +130,14 @@ describe('/api/account', () => {
       const r = await http()
         .put('/api/account/email')
         .set('Cookie', u.cookie)
-        .send({ email });
+        .send({ email, currentPassword: PASS });
       expect(r.status).toBe(400);
       expect(r.body.errors).toEqual({ email: 'Email không hợp lệ.' });
     }
     const taken = await http()
       .put('/api/account/email')
       .set('Cookie', u.cookie)
-      .send({ email: 'DA.CO@x.vn' });
+      .send({ email: 'DA.CO@x.vn', currentPassword: PASS });
     expect(taken.status).toBe(400);
     expect(taken.body.errors).toEqual({
       email: 'Email này đã được dùng cho tài khoản khác.',
@@ -138,7 +147,7 @@ describe('/api/account', () => {
         await http()
           .put('/api/account/email')
           .set('Cookie', u.cookie)
-          .send({ email: 'cua.toi@x.vn' })
+          .send({ email: 'cua.toi@x.vn', currentPassword: PASS })
       ).status,
     ).toBe(200);
   });
@@ -192,9 +201,107 @@ describe('/api/account', () => {
     });
     const missing = await put({});
     expect(missing.status).toBe(400);
-    expect(missing.body.errors).toMatchObject({
+    expect(missing.body.errors).toEqual({
       currentPassword: 'Vui lòng nhập mật khẩu hiện tại.',
+      newPassword: 'Vui lòng nhập mật khẩu.',
+    });
+    const longCurrent = await put({
+      currentPassword: 'a'.repeat(257),
+      newPassword: 'MatKhauMoi@2026',
+    });
+    expect(longCurrent.status).toBe(400);
+    expect(longCurrent.body.errors).toEqual({
+      currentPassword: 'Mật khẩu hiện tại không đúng.',
+    });
+    const longNew = await put({
+      currentPassword: PASS,
+      newPassword: 'a'.repeat(257),
+    });
+    expect(longNew.body.errors).toEqual({
+      newPassword: 'Mật khẩu tối đa 256 ký tự.',
     });
     expect(await authenticate(db, u.user.username, PASS)).not.toBeNull();
+  });
+  it('PUT password: mật khẩu mới là mật khẩu cũ dạng NFD → 400 phải khác', async () => {
+    const old = 'Mật khẩu cũ 2026';
+    const u = await userWithSession({ password: old });
+    const r = await http()
+      .put('/api/account/password')
+      .set('Cookie', u.cookie)
+      .send({ currentPassword: old, newPassword: old.normalize('NFD') });
+    expect(r.status).toBe(400);
+    expect(r.body.errors).toEqual({
+      newPassword: 'Mật khẩu mới phải khác mật khẩu hiện tại.',
+    });
+  });
+
+  it('PUT email: thiếu / sai / quá dài mật khẩu hiện tại → 400, email không đổi', async () => {
+    const u = await userWithSession({ email: 'cu@x.vn' });
+    const put = (body: object) =>
+      http().put('/api/account/email').set('Cookie', u.cookie).send(body);
+    for (const currentPassword of [undefined, '', 123]) {
+      const r = await put({ email: 'moi@x.vn', currentPassword });
+      expect(r.status).toBe(400);
+      expect(r.body.errors).toEqual({
+        currentPassword: 'Vui lòng nhập mật khẩu hiện tại.',
+      });
+    }
+    for (const currentPassword of ['sai-mat-khau', 'a'.repeat(257)]) {
+      const r = await put({ email: 'moi@x.vn', currentPassword });
+      expect(r.status).toBe(400);
+      expect(r.body.errors).toEqual({
+        currentPassword: 'Mật khẩu hiện tại không đúng.',
+      });
+    }
+    const both = await put({ email: 'abc' });
+    expect(both.body.errors).toEqual({
+      email: 'Email không hợp lệ.',
+      currentPassword: 'Vui lòng nhập mật khẩu hiện tại.',
+    });
+    const badEmailWrongPass = await put({
+      email: 'abc',
+      currentPassword: 'sai-mat-khau',
+    });
+    expect(badEmailWrongPass.body.errors).toEqual({
+      email: 'Email không hợp lệ.',
+    });
+    expect(
+      (await db.user.findUniqueOrThrow({ where: { id: u.user.id } })).email,
+    ).toBe('cu@x.vn');
+  });
+
+  it('đổi mật khẩu / đổi email → xóa mọi link đặt lại mật khẩu của user', async () => {
+    const u = await userWithSession();
+    const other = await userWithSession();
+    const addToken = (userId: number) =>
+      db.passwordResetToken.create({
+        data: {
+          id: Math.random().toString(36).slice(2),
+          userId,
+          expiresAt: new Date(Date.now() + 3600_000),
+        },
+      });
+    await addToken(u.user.id);
+    await addToken(other.user.id);
+    const pw = await http()
+      .put('/api/account/password')
+      .set('Cookie', u.cookie)
+      .send({ currentPassword: PASS, newPassword: 'MatKhauMoi@2026' });
+    expect(pw.status).toBe(204);
+    expect(
+      await db.passwordResetToken.count({ where: { userId: u.user.id } }),
+    ).toBe(0);
+    await addToken(u.user.id);
+    const em = await http()
+      .put('/api/account/email')
+      .set('Cookie', u.cookie)
+      .send({ email: 'moi@x.vn', currentPassword: 'MatKhauMoi@2026' });
+    expect(em.status).toBe(200);
+    expect(
+      await db.passwordResetToken.count({ where: { userId: u.user.id } }),
+    ).toBe(0);
+    expect(
+      await db.passwordResetToken.count({ where: { userId: other.user.id } }),
+    ).toBe(1);
   });
 });

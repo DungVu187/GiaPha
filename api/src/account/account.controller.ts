@@ -33,7 +33,7 @@ export class AccountController {
 
   @Put('email')
   async email(@CurrentUser() user: SessionUser, @Body() body: unknown) {
-    const r = await updateEmail(this.prisma, user.id, bodyOf(body).email);
+    const r = await updateEmail(this.prisma, user.id, bodyOf(body));
     if (!r.ok)
       throw new BadRequestException({ message: INVALID, errors: r.errors });
     log('info', 'email_updated', { userId: user.id });
