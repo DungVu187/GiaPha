@@ -23,6 +23,8 @@ test("điện thoại: header 64px, thanh tab đáy, khung cây không đè menu
   const menu = page.getByRole("dialog");
   await expect(menu).toContainText("VŨ VĂN TÔI");
   await expect(menu).toContainText(`${E2E_MEMBER.username} · Đời 3`);
+  await expect(menu.getByRole("link", { name: "Tài khoản của tôi" })).toBeVisible();
+  await expect(menu.getByRole("link", { name: "Quản trị" })).toHaveCount(0);
   await menu.getByRole("link", { name: "Thành viên" }).click();
   await expect(page).toHaveURL(/\/members$/);
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -50,4 +52,15 @@ test("desktop: menu có Lịch giỗ trỏ /anniversaries, nút Đăng xuất v�
   await expect(nav.getByRole("link", { name: "Lịch giỗ" })).toHaveAttribute("href", "/anniversaries");
   await expect(page.getByRole("button", { name: "Đăng xuất" })).toBeVisible();
   await expect(page.getByText(E2E_ADMIN.username, { exact: true })).toBeVisible();
+});
+
+test("menu theo vai trò: Admin thấy Quản trị; member không; tên đăng nhập mở Tài khoản của tôi", async ({ page }) => {
+  await loginAndWait(page, E2E_ADMIN.username, E2E_ADMIN.password);
+  const nav = page.getByRole("navigation", { name: "Điều hướng chính" });
+  await expect(nav.getByRole("link", { name: "Quản trị" })).toHaveAttribute("href", "/admin");
+  await page.getByRole("link", { name: `Tài khoản của tôi (${E2E_ADMIN.username})` }).click();
+  await expect(page).toHaveURL(/\/account$/);
+  await page.context().clearCookies();
+  await loginAndWait(page, E2E_MEMBER.username, E2E_MEMBER.password);
+  await expect(page.getByRole("navigation", { name: "Điều hướng chính" }).getByRole("link", { name: "Quản trị" })).toHaveCount(0);
 });

@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { NAV_ITEMS } from "./nav-items";
+import { ADMIN_NAV_ITEM, NAV_ITEMS } from "./nav-items";
 
-export function AppNav({ className }: { className?: string }) {
+export function AppNav({ className, isAdmin }: { className?: string; isAdmin?: boolean }) {
   const pathname = usePathname();
+  const items = isAdmin ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS;
   return (
     <nav aria-label="Điều hướng chính" className={cn("gap-5 lg:gap-6", className)}>
-      {NAV_ITEMS.map((item) => {
+      {items.map((item) => {
         const active = item.match(pathname);
         return (
           <Link

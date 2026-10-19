@@ -10,13 +10,28 @@ import { Button } from "@/components/ui/button";
 import type { SessionUser } from "@/lib/fetch-current-user";
 import { initialOf } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { NAV_ITEMS } from "./nav-items";
+import { ACCOUNT_LINK, ADMIN_NAV_ITEM, NAV_ITEMS, type NavItem } from "./nav-items";
 
 /** Ngăn kéo phải trên điện thoại (Figma M13). */
 export function MobileMenu({ user }: { user: SessionUser }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const name = user.member?.fullName ?? user.username;
+  const renderLink = ({ href, label, icon: Icon, match }: NavItem) => {
+    const active = match(pathname);
+    return (
+      <Link
+        key={href}
+        href={href}
+        onClick={() => setOpen(false)}
+        aria-current={active ? "page" : undefined}
+        className={cn("flex h-12 items-center gap-3 rounded-md px-3 font-medium", active ? "bg-primary-soft text-primary" : "hover:bg-muted")}
+      >
+        <Icon aria-hidden="true" className="size-5" />
+        {label}
+      </Link>
+    );
+  };
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger render={<Button variant="outline" aria-label="Mở menu" className="size-11 p-0 md:hidden" />}>
@@ -44,26 +59,10 @@ export function MobileMenu({ user }: { user: SessionUser }) {
             </Dialog.Close>
           </div>
           <nav aria-label="Menu" className="flex flex-col gap-1 p-3">
-            {NAV_ITEMS.map(({ href, label, icon: Icon, match }) => {
-              const active = match(pathname);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  onClick={() => setOpen(false)}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "flex h-12 items-center gap-3 rounded-md px-3 font-medium",
-                    active ? "bg-primary-soft text-primary" : "hover:bg-muted",
-                  )}
-                >
-                  <Icon aria-hidden="true" className="size-5" />
-                  {label}
-                </Link>
-              );
-            })}
+            {NAV_ITEMS.map(renderLink)}
           </nav>
-          <div className="border-t border-border p-3">
+          <div className="flex flex-col gap-1 border-t border-border p-3">
+            {[ACCOUNT_LINK, ...(user.role === "ADMIN" ? [ADMIN_NAV_ITEM] : [])].map(renderLink)}
             <LogoutButton variant="menu" />
           </div>
         </Dialog.Popup>

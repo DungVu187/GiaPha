@@ -13,7 +13,6 @@ test("member đã liên kết: lời chào + đời, bố, giỗ 30 ngày, hồ 
   const upcoming = page.getByRole("region", { name: "Giỗ trong 30 ngày tới" });
   await expect(upcoming.getByRole("link", { name: /VŨ VĂN GIỖ GẦN/ })).toContainText("Còn 5 ngày");
   await expect(upcoming.getByRole("link", { name: /VŨ VĂN GIỖ XA/ })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Tài khoản của tôi" })).toHaveCount(0);
 
   const toi = await memberIdByName(page, "Vũ Văn Tôi");
   await expect(page.getByRole("link", { name: /Hồ sơ của tôi/ })).toHaveAttribute("href", `/members/${toi}`);

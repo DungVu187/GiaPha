@@ -1,4 +1,5 @@
 import { User } from "lucide-react";
+import Link from "next/link";
 import { AccountMenu } from "@/components/account-menu";
 import { AppNav } from "@/components/app-nav";
 import { BrandSeal } from "@/components/brand-seal";
@@ -18,12 +19,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <BrandSeal />
           <span className="font-heading text-xl leading-7 font-bold text-primary md:sr-only lg:not-sr-only">GIA PHẢ HỌ VŨ</span>
         </div>
-        <AppNav className="hidden self-stretch md:flex" />
+        <AppNav isAdmin={user.role === "ADMIN"} className="hidden self-stretch md:flex" />
         <div className="flex items-center gap-4">
-          <span className="hidden items-center gap-2 font-medium lg:flex">
+          <Link
+            href="/account"
+            className="hidden items-center gap-2 font-medium hover:text-primary lg:flex"
+            aria-label={`Tài khoản của tôi (${user.username})`}
+          >
             <User aria-hidden="true" className="size-5 shrink-0" />
             <span className="max-w-[16ch] truncate">{user.username}</span>
-          </span>
+          </Link>
           <div className="hidden lg:block">
             <LogoutButton />
           </div>

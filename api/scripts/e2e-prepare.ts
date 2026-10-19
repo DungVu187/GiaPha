@@ -182,6 +182,40 @@ async function main() {
         passwordHash: await hashPassword(E2E_VIEWER_PASSWORD),
       },
     });
+
+    // Tài khoản riêng cho e2e GĐ6 (đổi mật khẩu/email, quản trị, quên mật khẩu) — không đụng tài khoản dùng chung.
+    const extra = JSON.parse(process.env.E2E_EXTRA_USERS ?? '[]') as {
+      username: string;
+      password: string;
+      email?: string | null;
+      member: string | null;
+    }[];
+    for (const u of extra) {
+      let memberId: number | null = null;
+      if (u.member) {
+        const fullName = normalizeFullName(u.member);
+        memberId = (
+          await db.member.create({
+            data: {
+              fullName,
+              searchName: toSearchName(fullName),
+              generation: 3,
+              gender: 'MALE',
+              fatherId: bac.id,
+            },
+          })
+        ).id;
+      }
+      await db.user.create({
+        data: {
+          username: u.username,
+          passwordHash: await hashPassword(u.password),
+          email: u.email ?? null,
+          memberId,
+          claimedAt: memberId ? new Date() : null,
+        },
+      });
+    }
   } finally {
     await db.$disconnect();
   }

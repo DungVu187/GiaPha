@@ -2,6 +2,7 @@
 
 import { Popover } from "@base-ui/react/popover";
 import { ChevronDown, UserRound } from "lucide-react";
+import Link from "next/link";
 import { LogoutButton } from "@/app/(app)/logout-button";
 import { Button } from "@/components/ui/button";
 import type { SessionUser } from "@/lib/fetch-current-user";
@@ -24,6 +25,12 @@ export function AccountMenu({ user }: { user: SessionUser }) {
                 {user.member ? ` · Đời ${user.member.generation}` : ""}
               </p>
             </div>
+            <Popover.Close
+              render={<Link href="/account" className="flex h-12 items-center gap-3 rounded-md px-3 font-medium hover:bg-muted" />}
+            >
+              <UserRound aria-hidden="true" className="size-5" />
+              Tài khoản của tôi
+            </Popover.Close>
             <LogoutButton variant="menu" />
           </Popover.Popup>
         </Popover.Positioner>
