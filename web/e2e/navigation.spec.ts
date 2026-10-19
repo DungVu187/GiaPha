@@ -42,6 +42,12 @@ test("tablet: header một hàng 72px, không có thanh tab, nút tài khoản m
   await expect(nav.getByRole("link", { name: "Lịch giỗ" })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Thanh điều hướng dưới" })).toBeHidden();
   await page.getByRole("button", { name: `Tài khoản ${E2E_ADMIN.username}` }).click();
+  const accountLink = page.getByRole("link", { name: "Tài khoản của tôi" });
+  await expect(accountLink).toHaveAttribute("href", "/account");
+  await accountLink.click();
+  await expect(page).toHaveURL(/\/account$/);
+  await expect(page.getByRole("button", { name: "Đăng xuất" })).toHaveCount(0);
+  await page.getByRole("button", { name: `Tài khoản ${E2E_ADMIN.username}` }).click();
   await page.getByRole("button", { name: "Đăng xuất" }).click();
   await expect(page).toHaveURL(/\/login$/);
 });
