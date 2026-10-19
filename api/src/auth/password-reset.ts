@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { log } from '../lib/logger.js';
 import type { Mailer } from '../mail/mailer.js';
 import { ServiceError } from '../members/member-service.js';
 import type { Db } from '../prisma/db.js';
@@ -49,6 +50,9 @@ export async function requestPasswordReset(
   if (recent) return { kind: 'cooldown' };
   const token = randomBytes(32).toString('base64url');
   const tokenId = hashToken(token);
+  await db.passwordResetToken.deleteMany({
+    where: { userId: user.id, expiresAt: { lte: now } },
+  });
   await db.passwordResetToken.create({
     data: {
       id: tokenId,
@@ -72,7 +76,20 @@ export async function requestPasswordReset(
         'Nếu bạn không yêu cầu, hãy bỏ qua thư này — mật khẩu của bạn không đổi.',
       ].join('\n'),
     });
-  } catch {
+  } catch (error) {
+    const code = (error as { code?: unknown } | null)?.code;
+    const raw = error instanceof Error ? error.message : String(error);
+    // Lỗi SMTP có thể nhắc lại người nhận / nội dung thư → che email và token trước khi log.
+    const message = raw
+      .split(token)
+      .join('[token]')
+      .split(user.email)
+      .join('[email]');
+    log('error', 'password_reset_mail_failed', {
+      userId: user.id,
+      code: typeof code === 'string' ? code : undefined,
+      message,
+    });
     await db.passwordResetToken.deleteMany({ where: { id: tokenId } });
     throw new ServiceError(503, MAIL_FAILED);
   }

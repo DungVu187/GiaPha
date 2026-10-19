@@ -4,9 +4,20 @@ import nodemailer from 'nodemailer';
 export type Mail = { to: string; subject: string; text: string };
 export type Mailer = (mail: Mail) => Promise<void>;
 
+const SMTP_TIMEOUT_MS = 15_000;
+
+/** "587" → 587; rỗng/thiếu → 587; không phải số nguyên 1–65535 → null. */
+function smtpPort(raw: string | undefined): number | null {
+  if (!raw) return 587;
+  if (!/^[1-9]\d{0,4}$/.test(raw)) return null;
+  const port = Number(raw);
+  return port <= 65535 ? port : null;
+}
+
 /**
  * Chọn cách gửi theo biến môi trường (spec D10): cần APP_URL (để tạo link). MAIL_OUTBOX_FILE (dev/e2e: ghi thư
- * ra file, mỗi dòng một JSON) ưu tiên hơn SMTP_HOST + SMTP_FROM (gửi thật). Không đủ → null = tắt quên mật khẩu.
+ * ra file, mỗi dòng một JSON) ưu tiên hơn SMTP_HOST + SMTP_FROM (gửi thật). Không đủ / SMTP_PORT sai → null = tắt
+ * quên mật khẩu.
  */
 export function mailerFromEnv(
   env: NodeJS.ProcessEnv = process.env,
@@ -18,7 +29,8 @@ export function mailerFromEnv(
       await appendFile(outbox, `${JSON.stringify(mail)}\n`, 'utf8');
     };
   if (env.SMTP_HOST && env.SMTP_FROM) {
-    const port = Number(env.SMTP_PORT || 587);
+    const port = smtpPort(env.SMTP_PORT);
+    if (port === null) return null;
     // ponytail: tạo transport mỗi lần gọi (không pool) — vài thư/ngày; chuyển sang transport dùng chung nếu gửi nhiều.
     const transport = nodemailer.createTransport({
       host: env.SMTP_HOST,
@@ -27,10 +39,19 @@ export function mailerFromEnv(
       auth: env.SMTP_USER
         ? { user: env.SMTP_USER, pass: env.SMTP_PASS ?? '' }
         : undefined,
+      connectionTimeout: SMTP_TIMEOUT_MS,
+      greetingTimeout: SMTP_TIMEOUT_MS,
+      socketTimeout: SMTP_TIMEOUT_MS,
     });
     const from = env.SMTP_FROM;
-    return async (mail) => {
-      await transport.sendMail({ from, ...mail });
+    return async ({ to, subject, text }) => {
+      // Địa chỉ dạng object: nodemailer không phân tích lại chuỗi (email có < > , " không bị tách thành nhiều người nhận).
+      await transport.sendMail({
+        from,
+        to: { name: '', address: to },
+        subject,
+        text,
+      });
     };
   }
   return null;

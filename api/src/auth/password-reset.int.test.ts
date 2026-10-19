@@ -11,6 +11,7 @@ import {
   describe,
   expect,
   it,
+  vi,
 } from 'vitest';
 import { createTestApp } from '../../test/helpers/app.js';
 import { testDb as db } from '../../test/helpers/test-db.js';
@@ -20,6 +21,7 @@ import {
   checkResetToken,
   confirmPasswordReset,
   RESET_TTL_MS,
+  requestPasswordReset,
 } from './password-reset.js';
 import { createSession, hashToken, validateSessionToken } from './session.js';
 
@@ -194,14 +196,98 @@ describe('/api/auth/password-reset', () => {
       'khong-co-thu-muc',
       'x.jsonl',
     );
-    const r = await http()
-      .post('/api/auth/password-reset')
-      .send({ identifier: 'loimail' });
-    expect(r.status).toBe(503);
-    expect(r.body.message).toBe('Không gửi được email, vui lòng thử lại sau.');
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const out = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const r = await http()
+        .post('/api/auth/password-reset')
+        .send({ identifier: 'loimail' });
+      expect(r.status).toBe(503);
+      expect(r.body.message).toBe(
+        'Không gửi được email, vui lòng thử lại sau.',
+      );
+      const lines = [...err.mock.calls, ...out.mock.calls]
+        .flat()
+        .map(String)
+        .filter((l) => l.includes('password_reset_mail_failed'));
+      expect(lines).toHaveLength(1);
+      expect(JSON.parse(lines[0])).toMatchObject({
+        level: 'error',
+        event: 'password_reset_mail_failed',
+        userId: u.id,
+        code: 'ENOENT',
+      });
+      const logged = [...err.mock.calls, ...out.mock.calls].flat().join('\n');
+      expect(logged).not.toContain('loi@x.vn');
+      expect(logged).not.toContain('reset-password');
+    } finally {
+      err.mockRestore();
+      out.mockRestore();
+    }
     expect(await db.passwordResetToken.count({ where: { userId: u.id } })).toBe(
       0,
     );
+  });
+
+  it('log lỗi gửi mail: có code + message, không lộ email/token/link (service)', async () => {
+    const u = await user({ username: 'smtploi', email: 'smtp.loi@x.vn' });
+    let text = '';
+    const failing = (mail: { to: string; text: string }) => {
+      text = mail.text;
+      // Lỗi SMTP thật có thể nhắc lại địa chỉ người nhận / nội dung thư.
+      return Promise.reject(
+        Object.assign(
+          new Error(`550 rejected <${mail.to}> ${mail.text.slice(-200)}`),
+          { code: 'EENVELOPE' },
+        ),
+      );
+    };
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const out = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await expect(
+        requestPasswordReset(db, 'smtploi', failing, 'http://x'),
+      ).rejects.toMatchObject({ status: 503 });
+      const token = /reset-password\?token=([\w-]+)/.exec(text)![1];
+      const lines = [...err.mock.calls, ...out.mock.calls].flat().map(String);
+      expect(lines).toHaveLength(1);
+      expect(JSON.parse(lines[0])).toMatchObject({
+        event: 'password_reset_mail_failed',
+        userId: u.id,
+        code: 'EENVELOPE',
+      });
+      expect(JSON.parse(lines[0]).message).toContain('550 rejected');
+      expect(lines[0]).not.toContain('smtp.loi@x.vn');
+      expect(lines[0]).not.toContain(token);
+    } finally {
+      err.mockRestore();
+      out.mockRestore();
+    }
+    expect(await db.passwordResetToken.count({ where: { userId: u.id } })).toBe(
+      0,
+    );
+  });
+
+  it('yêu cầu mới dọn token hết hạn của user, còn đúng 1 token mới', async () => {
+    const u = await user({ username: 'donrac', email: 'dr@x.vn' });
+    const past = new Date(Date.now() - 2 * RESET_TTL_MS);
+    await db.passwordResetToken.create({
+      data: {
+        id: hashToken('het-han'),
+        userId: u.id,
+        expiresAt: new Date(past.getTime() + RESET_TTL_MS),
+        createdAt: past,
+      },
+    });
+    const r = await http()
+      .post('/api/auth/password-reset')
+      .send({ identifier: 'donrac' });
+    expect(r.status).toBe(200);
+    const rows = await db.passwordResetToken.findMany({
+      where: { userId: u.id },
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].id).toBe(hashToken(tokenFrom((await mails())[0].text)));
   });
 
   it('check + confirm: đổi mật khẩu, mọi phiên và mọi link cũ bị xóa; link dùng lần 2 → 404', async () => {
