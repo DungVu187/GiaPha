@@ -35,7 +35,7 @@ const GENERATION_CONFLICT =
 
 export class ServiceError extends Error {
   constructor(
-    readonly status: 400 | 403 | 404 | 409,
+    readonly status: 400 | 403 | 404 | 409 | 429 | 503,
     message: string,
     readonly errors?: FieldErrors,
   ) {
