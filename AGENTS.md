@@ -19,7 +19,7 @@ Muốn đổi một quyết định đã chốt (bảng D1–D16 trong spec) →
 
 ## Trạng thái hiện tại
 
-- GĐ1–GĐ5 xong. Bước tiếp theo: plan GĐ6.
+- GĐ1–GĐ6 xong. Bước tiếp theo: plan GĐ7.
 - Cập nhật mục này khi xong mỗi giai đoạn.
 
 | GĐ | Nội dung | Trạng thái |
@@ -29,7 +29,7 @@ Muốn đổi một quyết định đã chốt (bảng D1–D16 trong spec) →
 | 3 | Đăng ký + phát hiện trùng + "Đây là tôi" | Xong |
 | 4 | Cây gia phả (React Flow) | Xong |
 | 5 | Danh sách theo đời, tìm kiếm, lịch giỗ, dashboard | Xong |
-| 6 | Tài khoản, quên mật khẩu, trang quản trị | Chưa làm |
+| 6 | Tài khoản, quên mật khẩu, trang quản trị | Xong |
 | 7 | Deploy VPS (Nginx, PM2, SSL, backup), CD, monitor, UptimeRobot | Chưa làm |
 
 ## Stack

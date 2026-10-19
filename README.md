@@ -19,8 +19,11 @@ Website gia phả cho dòng họ Vũ: quản lý thành viên theo đời, quan 
 - Trang chủ: lời chào theo hồ sơ, giỗ 30 ngày tới, ô tìm, lối tắt.
 - Cây gia phả dễ xem trên điện thoại: mở ở mức chữ đọc được, thu nhỏ thì thẻ chỉ còn tên, chế độ "dạng danh sách theo nhánh".
 - Giao diện điện thoại có thanh tab đáy và menu ngăn kéo; tablet có header một hàng.
+- Tài khoản của tôi: đổi mật khẩu (thiết bị khác bị đăng xuất), thêm/sửa/xóa email (cần nhập mật khẩu hiện tại).
+- Quên mật khẩu qua email khi máy chủ có cấu hình gửi mail (`APP_URL` + `SMTP_*` trong `api/.env`): link dùng một lần, hết hạn sau 30 phút; tài khoản chưa có email được hướng dẫn nhờ quản trị viên.
+- Trang quản trị (chỉ Admin): đặt lại mật khẩu, gỡ liên kết tài khoản với hồ sơ, đổi quyền (không hạ được Admin cuối cùng), lọc tài khoản vừa nhận hồ sơ có sẵn để rà soát.
 
-Đang làm: tài khoản của tôi, quên mật khẩu, trang quản trị, triển khai VPS.
+Đang làm: triển khai VPS (Nginx, PM2, SSL, sao lưu, giới hạn tần suất đăng nhập/đăng ký).
 
 ## Công nghệ
 
@@ -68,6 +71,8 @@ Yêu cầu: Node.js 24, PostgreSQL 18 cài sẵn trên máy.
    npm run db:migrate
    npm run db:seed
    ```
+
+   Muốn bật quên mật khẩu: điền `APP_URL` và `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` (vd Gmail SMTP với mật khẩu ứng dụng).
 
 3. Web:
 
