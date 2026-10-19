@@ -267,6 +267,11 @@ export async function deleteMember(
       );
     }
     const spouseIds = await spouseIdsOf(tx, id);
+    // claimedAt gắn với liên kết: gỡ cùng lúc để trang quản trị không còn "vừa nhận hồ sơ" cho tài khoản đã mất hồ sơ.
+    await tx.user.updateMany({
+      where: { memberId: id },
+      data: { claimedAt: null },
+    });
     // Marriage cascade, User.memberId set null (DB).
     await tx.member.delete({ where: { id } });
     for (const spouseId of spouseIds) await syncGeneration(tx, spouseId);

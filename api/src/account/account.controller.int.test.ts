@@ -152,6 +152,19 @@ describe('/api/account', () => {
     ).toBe(200);
   });
 
+  it('PUT email: thiếu khóa email trong body → 400, email không đổi (chỉ "" / null mới là xóa)', async () => {
+    const u = await userWithSession({ email: 'giu.nguyen@x.vn' });
+    const r = await http()
+      .put('/api/account/email')
+      .set('Cookie', u.cookie)
+      .send({ currentPassword: PASS });
+    expect(r.status).toBe(400);
+    expect(r.body.errors).toEqual({ email: 'Email không hợp lệ.' });
+    expect(
+      (await db.user.findUniqueOrThrow({ where: { id: u.user.id } })).email,
+    ).toBe('giu.nguyen@x.vn');
+  });
+
   it.each([
     ['ADMIN', true],
     ['MEMBER', true],

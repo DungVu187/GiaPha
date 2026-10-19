@@ -1,6 +1,10 @@
 import type { Role } from '../generated/prisma/client.js';
 import { Prisma } from '../generated/prisma/client.js';
-import { newPasswordError, parseOptionalEmail } from '../auth/credentials.js';
+import {
+  EMAIL_INVALID,
+  newPasswordError,
+  parseOptionalEmail,
+} from '../auth/credentials.js';
 import {
   hashPassword,
   MAX_PASSWORD_LENGTH,
@@ -74,7 +78,11 @@ export async function updateEmail(
   body: { email?: unknown; currentPassword?: unknown },
 ): Promise<{ ok: true; email: string | null } | { ok: false; errors: Errors }> {
   const errors: Errors = {};
-  const parsed = parseOptionalEmail(body.email);
+  // Thiếu khóa email là yêu cầu hỏng, không phải "xóa email" — chỉ "" / null mới xóa.
+  const parsed: ReturnType<typeof parseOptionalEmail> =
+    'email' in body
+      ? parseOptionalEmail(body.email)
+      : { ok: false, error: EMAIL_INVALID };
   if (!parsed.ok) errors.email = parsed.error;
   const current = body.currentPassword;
   if (!hasCurrentPassword(current))

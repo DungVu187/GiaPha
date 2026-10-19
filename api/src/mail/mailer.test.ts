@@ -25,6 +25,7 @@ describe('mailerFromEnv', () => {
       host: 'smtp.x',
       port: 465,
       secure: true,
+      requireTLS: false,
       auth: { user: 'u', pass: 'p' },
       connectionTimeout: 15_000,
       greetingTimeout: 15_000,
@@ -39,8 +40,35 @@ describe('mailerFromEnv', () => {
     });
     mailerFromEnv({ APP_URL: 'http://x', SMTP_HOST: 'h', SMTP_FROM: 'f' });
     expect(nodemailer.createTransport).toHaveBeenLastCalledWith(
-      expect.objectContaining({ port: 587, secure: false, auth: undefined }),
+      expect.objectContaining({
+        port: 587,
+        secure: false,
+        requireTLS: true,
+        auth: undefined,
+      }),
     );
+  });
+  it('production: bỏ qua MAIL_OUTBOX_FILE — chỉ outbox → null; outbox + SMTP → gửi SMTP', async () => {
+    expect(
+      mailerFromEnv({
+        NODE_ENV: 'production',
+        APP_URL: 'http://x',
+        MAIL_OUTBOX_FILE: 'x.jsonl',
+      }),
+    ).toBeNull();
+    const send = mailerFromEnv({
+      NODE_ENV: 'production',
+      APP_URL: 'http://x',
+      MAIL_OUTBOX_FILE: 'should-not-be-written.jsonl',
+      SMTP_HOST: 'smtp.prod',
+      SMTP_FROM: 'a@x.vn',
+    })!;
+    expect(nodemailer.createTransport).toHaveBeenLastCalledWith(
+      expect.objectContaining({ host: 'smtp.prod' }),
+    );
+    sendMail.mockClear();
+    await send({ to: 'a@b.cd', subject: 'S', text: 'T' });
+    expect(sendMail).toHaveBeenCalledTimes(1);
   });
   it('thiếu APP_URL → null (tắt), kể cả có SMTP/outbox', () => {
     expect(

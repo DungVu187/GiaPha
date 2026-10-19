@@ -411,6 +411,28 @@ describe('deleteMember', () => {
       await db.member.findUnique({ where: { id: husband.id } }),
     ).not.toBeNull();
   });
+  it('tài khoản đã nhận hồ sơ ("Đây là tôi") → xóa thành viên thì memberId và claimedAt đều null', async () => {
+    const m = await make(db, { generation: 1 });
+    const user = await db.user.create({
+      data: {
+        username: 'nhan',
+        passwordHash: 'x',
+        memberId: m.id,
+        claimedAt: new Date(),
+      },
+    });
+    const other = await db.user.create({
+      data: { username: 'khac', passwordHash: 'x', claimedAt: new Date() },
+    });
+    await deleteMember(db, ADMIN, m.id);
+    const after = await db.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(after.memberId).toBeNull();
+    expect(after.claimedAt).toBeNull();
+    // Tài khoản khác không bị đụng.
+    expect(
+      (await db.user.findUniqueOrThrow({ where: { id: other.id } })).claimedAt,
+    ).not.toBeNull();
+  });
   it('còn con → 409, không xóa', async () => {
     const { me } = await family();
     await expectError(deleteMember(db, ADMIN, me.id), 409);

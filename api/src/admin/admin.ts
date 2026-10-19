@@ -96,7 +96,7 @@ export async function changeRole(
   await db.$transaction(async (tx) => {
     // Khóa mọi hàng Admin: hai Admin hạ nhau cùng lúc thì yêu cầu sau phải thấy số Admin đã giảm.
     const admins = await tx.$queryRaw<{ id: number }[]>`
-      SELECT id FROM "User" WHERE role = 'ADMIN' FOR UPDATE`;
+      SELECT id FROM "User" WHERE role = 'ADMIN' ORDER BY id FOR UPDATE`;
     // Người thao tác có thể vừa bị hạ quyền sau khi guard đọc phiên.
     if (!admins.some((a) => a.id === actor.id))
       throw new ServiceError(403, FORBIDDEN);

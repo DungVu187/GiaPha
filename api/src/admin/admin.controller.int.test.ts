@@ -300,7 +300,9 @@ describe('/api/admin/users', () => {
         .set('Cookie', b.cookie)
         .send({ role: 'MEMBER' }),
     ]);
-    // Yêu cầu thua: 409 nếu guard đọc role trước khi bên kia commit, 403 nếu sau.
+    // Yêu cầu thua ra 403: hoặc guard đã thấy role bị hạ, hoặc (guard đọc trước khi bên kia commit) kiểm actor
+    // trong vùng khóa hàng Admin thấy mình không còn là Admin. 409 (Admin cuối) giữ trong tập chấp nhận để test
+    // không phụ thuộc thứ tự kiểm trong service.
     const statuses = [ra.status, rb.status].sort((x, y) => x - y);
     expect(statuses[0]).toBe(204);
     expect([403, 409]).toContain(statuses[1]);
