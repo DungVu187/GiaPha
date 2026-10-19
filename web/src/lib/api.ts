@@ -16,3 +16,14 @@ export async function apiGet<T>(path: string): Promise<T | null> {
   if (!res.ok) throw new Error(`API ${path} lỗi ${res.status}`);
   return (await res.json()) as T;
 }
+
+/** POST tới API từ server component, không kèm cookie (route công khai). */
+export async function apiPostPublic<T>(path: string, body: unknown): Promise<{ status: number; body: T | null }> {
+  const res = await fetch(`${API_URL()}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+  return { status: res.status, body: (await res.json().catch(() => null)) as T | null };
+}

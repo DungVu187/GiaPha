@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
+import { E2E_MAIL_OUTBOX } from "./e2e/fixtures";
 
 // Lấy TEST_DATABASE_URL từ api/.env khi chạy local; CI truyền qua env.
 if (existsSync("../api/.env")) process.loadEnvFile("../api/.env");
@@ -32,6 +33,8 @@ export default defineConfig({
         DATABASE_URL: TEST_DATABASE_URL,
         PORT: "4000",
         UPLOADS_DIR: path.join(os.tmpdir(), "giapha-e2e-uploads"),
+        APP_URL: "http://localhost:3000",
+        MAIL_OUTBOX_FILE: E2E_MAIL_OUTBOX,
       },
     },
     {

@@ -1,7 +1,9 @@
 import { execSync } from "node:child_process";
-import { E2E_ACCOUNT, E2E_ADMIN, E2E_MEMBER, E2E_RESET, E2E_TARGET, E2E_VIEWER } from "./fixtures";
+import { rmSync } from "node:fs";
+import { E2E_ACCOUNT, E2E_ADMIN, E2E_MEMBER, E2E_MAIL_OUTBOX, E2E_RESET, E2E_TARGET, E2E_VIEWER } from "./fixtures";
 
 export default function globalSetup() {
+  rmSync(E2E_MAIL_OUTBOX, { force: true });
   const url = process.env.TEST_DATABASE_URL;
   if (!url) throw new Error("Thiếu TEST_DATABASE_URL (đặt trong api/.env hoặc biến môi trường)");
   execSync("npm --prefix ../api run e2e:prepare", {

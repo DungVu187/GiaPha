@@ -1,13 +1,15 @@
 "use client";
 
 import { CircleAlert } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { SuccessNotice } from "@/components/success-notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function LoginForm() {
+export function LoginForm({ canReset = false, justReset = false }: { canReset?: boolean; justReset?: boolean }) {
   const router = useRouter();
   const passwordRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string>();
@@ -45,6 +47,7 @@ export function LoginForm() {
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-6">
+      {justReset && <SuccessNotice>Đã đổi mật khẩu. Hãy đăng nhập lại.</SuccessNotice>}
       {error && (
         <div
           role="alert"
@@ -70,6 +73,11 @@ export function LoginForm() {
             placeholder="Nhập mật khẩu"
             required
           />
+          {canReset && (
+            <Link href="/forgot-password" className="self-end text-sm font-medium text-primary underline underline-offset-4">
+              Quên mật khẩu?
+            </Link>
+          )}
         </div>
       </div>
       <Button type="submit" className="w-full" disabled={pending}>
