@@ -41,6 +41,9 @@ test("gửi link → che email, gửi lại quá sớm bị chặn; mở link �
   await page.goto(link);
   await expect(page.getByRole("heading", { name: "Đặt mật khẩu mới" })).toBeVisible();
   await expect(page.getByText(`Cho tài khoản ${E2E_RESET.username}.`)).toBeVisible();
+  // Token nằm trong URL: không được lọt sang trang khác qua Referer, không cho máy tìm kiếm lập chỉ mục.
+  await expect(page.locator('meta[name="referrer"]')).toHaveAttribute("content", "no-referrer");
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex, nofollow");
   await page.getByLabel("Mật khẩu mới", { exact: true }).fill(NEW_PASSWORD);
   await page.getByLabel("Nhập lại mật khẩu mới").fill("khac-han-nhe");
   await page.getByRole("button", { name: "Lưu mật khẩu mới" }).click();

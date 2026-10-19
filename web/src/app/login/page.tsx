@@ -2,14 +2,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BrandSeal } from "@/components/brand-seal";
 import { Card } from "@/components/ui/card";
-import { apiGet } from "@/lib/api";
+import { passwordResetEnabled } from "@/lib/api";
 import { getCurrentUser } from "@/lib/current-user";
 import { LoginForm } from "./login-form";
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ reset?: string | string[] }> }) {
   if (await getCurrentUser()) redirect("/");
   const sp = await searchParams;
-  const enabled = (await apiGet<{ enabled: boolean }>("/api/auth/password-reset/enabled"))?.enabled ?? false;
+  const enabled = await passwordResetEnabled();
   return (
     <main className="flex flex-1 items-center justify-center px-5 py-10 sm:py-20">
       <Card className="w-full max-w-[480px] gap-5 rounded-lg px-6 py-8 text-base ring-0 border border-border shadow-[var(--shadow-card)] sm:gap-6 sm:p-10">

@@ -2,6 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { SESSION_COOKIE } from "./fetch-current-user";
+import { fetchPasswordResetEnabled } from "./password-reset-enabled";
 
 const API_URL = () => process.env.API_URL ?? "http://localhost:4000";
 
@@ -26,4 +27,9 @@ export async function apiPostPublic<T>(path: string, body: unknown): Promise<{ s
     cache: "no-store",
   });
   return { status: res.status, body: (await res.json().catch(() => null)) as T | null };
+}
+
+/** Quên mật khẩu đã bật chưa; API lỗi / không gọi được → false (không làm sập trang đăng nhập). */
+export function passwordResetEnabled(): Promise<boolean> {
+  return fetchPasswordResetEnabled(API_URL());
 }
