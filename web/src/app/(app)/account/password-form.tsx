@@ -1,11 +1,12 @@
 "use client";
 
-import { Check, CircleAlert } from "lucide-react";
+import { CircleAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SuccessNotice } from "@/components/success-notice";
 import { validateNewPassword } from "@/lib/account-form";
 
 type Field = "currentPassword" | "newPassword" | "confirmPassword";
@@ -98,12 +99,7 @@ export function PasswordForm() {
     <section aria-labelledby="password-title" className="flex flex-col gap-5 rounded-lg border border-border bg-card p-6 sm:p-8">
       <h2 id="password-title" className="font-heading text-2xl font-semibold">Đổi mật khẩu</h2>
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
-        {success && (
-          <div role="status" className="flex items-center gap-3 rounded-md border border-green-700 bg-green-50 px-4 py-3 font-medium text-green-900">
-            <Check aria-hidden="true" className="size-5 shrink-0" />
-            <p>{success}</p>
-          </div>
-        )}
+        {success && <SuccessNotice>{success}</SuccessNotice>}
         {failure && (
           <div role="alert" className="flex items-center gap-3 rounded-md border border-destructive bg-primary-soft px-4 py-3 font-medium text-destructive">
             <CircleAlert aria-hidden="true" className="size-5 shrink-0" />
